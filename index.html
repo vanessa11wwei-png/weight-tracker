@@ -10,7 +10,1463 @@
   <div id="root"></div>
   
 <script>
-(function(){
+(function(){<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF8F5">
+  <title>温暖减脂日记</title>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 基础库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+
+  <script>
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    const { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } = Recharts;
+
+    /* ══════════════ 常量 ══════════════ */
+    const START = "2026-09-03";
+    const START_KG = 64.0;
+    const GOAL_KG = 50.0;
+    const OK_KG = 52.5;
+    const START_WAIST = 80;
+    const GOAL_WAIST = 67;
+
+    const BREAKFAST = [["豆浆400ml + 茶叶蛋2个 + 玉米半根", 310, 1], ["牛奶250 + 全麦面包2片 + 水煮蛋1", 340], ["燕麦40g + 牛奶250 + 香蕉半根", 330], ["杂粮馒头1 + 鸡蛋1 + 无糖豆浆", 320], ["全麦面包2片 + 芝士1片 + 蛋1 + 圣女果", 340], ["小米粥 + 鹌鹑蛋5个 + 凉拌黄瓜", 280], ["便利店：牛奶 + 溏心蛋2 + 苹果", 330], ["家里做的饭", 350], ["其他 / 外食", 400], ["没吃", 0]];
+    const LUNCH = [["杂粮饭半份 + 卤鸡腿去皮 + 炒空心菜", 500, 1], ["米饭半份 + 番茄炒蛋 + 清蒸龙利鱼 + 生菜", 480], ["米饭半份 + 肉丝 + 上汤娃娃菜", 500], ["牛肉汤面（面吃2/3）+ 多要青菜", 490], ["米饭半份 + 白切鸡 + 韭菜炒蛋", 510], ["麻辣烫（清汤微辣）", 470], ["轻食沙拉碗（酱汁只用一半）", 500], ["家里做的饭", 500], ["其他 / 外食", 650], ["聚餐 / 放开吃", 900, 0, "feast"], ["没吃", 0]];
+    const SNACK = [["牛奶250ml + 圣女果一把", 150, 1], ["苹果1个 + 水煮蛋1个", 170], ["即食鸡胸肠 + 圣女果", 100], ["毛豆一把", 105], ["原味坚果15g", 90], ["85%黑巧2块 + 茶", 90], ["无糖酸奶100g", 90], ["其他", 150], ["没吃", 0]];
+    const DINNER = [["番茄鸡蛋荞麦面（面一半）+ 空心菜", 430, 1], ["龙利鱼150 + 蒜蓉空心菜 + 半碗杂粮饭", 420], ["孜然烤鸡腿去皮 + 蒜蓉菠菜 + 玉米半根", 460], ["韭菜炒蛋 + 豆干炒四季豆 + 半碗饭", 450], ["虾仁 + 嫩豆腐 + 上海青 + 半碗饭", 430], ["卤牛肉100 + 蔬菜沙拉 + 全麦面包1片", 430], ["清汤麻辣烫（微辣）", 440], ["番茄牛肉汤 + 半碗饭 + 白灼包菜", 450], ["家里做的饭", 500], ["其他 / 外卖", 650], ["聚餐 / 放开吃", 900, 0, "feast"], ["没吃", 0]];
+    const TEA = [["没喝", 0, "ok"], ["自制奶茶", 130, "ok"], ["外买无糖", 90, "ok"], ["外买正常糖", 450, "bad"]];
+    const NIGHT = [["没吃", 0, "ok"], ["牛奶+鸡蛋", 200, "ok"], ["吃了", 700, "bad"]];
+    const SPORT = ["没做", "休息日", "游泳 45分钟", "下肢+臀+核心", "背肩+核心（矫正溜肩）", "骑车 / 爬山 / 走路", "居家跟练 / 散步", "其他运动"];
+    
+    const MEALKEYS = { b: ["早餐", BREAKFAST], l: ["午餐", LUNCH], s: ["加餐", SNACK], d: ["晚餐", DINNER] };
+    
+    const PHASES = [
+      { until: 14, name: "准备期", note: "还在家，只做6条规则" },
+      { until: 28, name: "冲刺期", note: "上班了，建立三餐节奏" },
+      { until: 84, name: "加速期", note: "完整菜单 + 每周4练" },
+      { until: 140, name: "稳定期", note: "每周约1斤" },
+      { until: 168, name: "收尾期", note: "塑形为主" },
+      { until: 99999, name: "维持期", note: "守住4条红线" }
+    ];
+    
+    const RULES1 = ["起床 400ml 温柠檬水，一口气喝完", "全天 2000ml 液体，什么茶都算", "奶茶改自制或无糖", "不吃半夜那顿", "走够 6000 步", "比昨天早睡 40 分钟"];
+    const MILESTONES = [[28, 59.5, 76.5, "掉7–9斤，裤腰松"], [56, 58.0, 75, "衣服明显松"], [84, 56.0, 72, "沙漏感回来 · 去复查B超"], [140, 52.0, 68, "曲线明确"], [168, 50.0, 66, "目标达成"]];
+    const TRAINING = [
+      ["周一", "游泳 45分钟", "蛙泳自由泳交替，游2分钟休30秒"],
+      ["周二", "下肢+臀+核心", "深蹲4×12 · 臀桥4×15 · 箭步蹲3×每侧10 · 罗马尼亚硬拉3×12 · 腿弯举3×12 · 死虫3×每侧10 · 侧平板3×每侧20秒"],
+      ["周三", "休息", "散步或彻底躺平"],
+      ["周四", "背肩+核心", "高位下拉4×12 · 坐姿划船3×12 · 面拉4×15 · Y字举3×12 · 侧平举3×15 · 三头下压3×15 · 平板支撑3×40秒"],
+      ["周五", "游泳 45分钟", "同周一"],
+      ["周六", "自由活动", "骑车、爬山、逛街走路，当放松"],
+      ["周日", "休息", ""]
+    ];
+    const DAILY3 = [
+      ["真空腹", "早上空腹 3组×15秒", "收腰围，沙漏腰的关键"],
+      ["靠墙抬腿", "睡前 10分钟", "消小腿水肿"],
+      ["靠墙天使", "白天随时 2组×10", "矫正溜肩"]
+    ];
+    const FIXES = [
+      ["体重不动", "看7天平均。连续14天不动才叫平台期。处理顺序：先加活动量 → 再查油和酱料 → 最后才减50大卡。不要一上来砍热量。"],
+      ["一天涨1kg", "是水和食物重量。高盐外食后必涨，两天回落。"],
+      ["经期那几天", "不看数据、不下结论、训练降强度。停滞或涨0.5–1kg都正常。"],
+      ["暴食一顿", "当天照常吃完，第二天正常继续。绝不靠饿下一顿补偿，那是下一轮暴食的开关。"],
+      ["暴食一周", "回到准备期那6条规则，只做规则不数热量，两周后重新入轨。"],
+      ["无聊想吃", "设10分钟闹钟，去洗脸、下楼、洗澡。10分钟后还想吃，就吃备好的低卡零食。"],
+      ["压力想吃", "冲动20–40分钟消退。做占手的事：洗澡、洗头、游泳、打游戏。"],
+      ["半夜想吃", "治本是调作息，你半夜吃是因为还醒着。过渡期：热牛奶250 + 水煮蛋1个，比烧烤少1000大卡。外卖App挪到第三屏。"],
+      ["朋友聚餐", "一周第1次随便吃，这就是自由餐。第2次先菜后饭、只喝茶、不点油炸和甜品。第3次起只吃菜和蛋白质。"],
+      ["连吃4天以上", "切维持模式，只要求不涨：早餐不动 + 每天8000步 + 不喝含糖饮料。结束后直接回归，不做补偿性节食。"],
+      ["加班很晚", "下午加餐必吃。回家喝牛奶配鸡蛋，或一小碗面，别硬扛。"],
+      ["火锅烧烤局", "不推掉。当天早午餐各减100大卡，点清汤锅微辣，先涮菜后涮肉，蘸料用醋+生抽+蒜，不用麻酱。"]
+    ];
+    const FOODS = [
+      ["最爱蔬菜", "空心菜 · 韭菜 · 番茄 · 海带 · 四季豆"],
+      ["其他蔬菜", "生菜 · 菠菜 · 娃娃菜 · 上海青 · 大白菜 · 包菜 · 豆芽 · 黄瓜 · 香菜"],
+      ["肉禽蛋", "鸡腿肉去皮 · 牛肉 · 猪里脊 · 鸭肉 · 鸡蛋 · 鹌鹑蛋 · 卤牛肉"],
+      ["水产", "龙利鱼 · 巴沙鱼 · 带鱼 · 金枪鱼罐头 · 虾 · 花甲 · 三文鱼"],
+      ["豆制品", "老豆腐 · 嫩豆腐 · 豆干 · 千张 · 腐竹 · 无糖豆浆 · 毛豆"],
+      ["主食", "杂粮饭 · 白米饭 · 荞麦面 · 全麦面包 · 燕麦 · 玉米 · 土豆 · 藜麦 · 杂粮馒头"],
+      ["水果", "苹果 · 梨 · 香蕉 · 蓝莓 · 草莓 · 圣女果 · 柚子 · 橙子 · 火龙果 · 木瓜 · 桃子"],
+      ["调味", "蒜 · 姜 · 葱 · 醋 · 生抽 · 蚝油 · 蒸鱼豉油 · 花椒 · 孜然 · 咖喱 · 黑胡椒 · 柠檬（微辣）"]
+    ];
+    const AVOID = "菇类 · 西兰花 · 胡萝卜 · 芹菜 · 苦瓜 · 茄子 · 洋葱 · 青椒 · 红薯 · 紫薯 · 芋头 · 茼蒿 · 西葫芦 · 秋葵 · 莴笋 · 油麦菜 · 苋菜 · 冬瓜 · 丝瓜 · 芦笋 · 白萝卜 · 莲藕 · 山药 · 南瓜 · 彩椒 · 西洋菜 · 芥兰 · 菜心 · 紫甘蓝 · 木耳 · 魔芋 · 米粉河粉 · 猕猴桃 · 黑咖啡 · 杏仁奶";
+    const SHOPPING = [
+      ["空气炸锅 4–5L", "¥180", "主力：烤鸡腿、烤虾、烤玉米，不用油不用看火"],
+      ["不粘炒锅 28cm", "¥60", "炒菜煎蛋"],
+      ["1L冷泡瓶 + 茶包", "¥50", "解决喝水问题，睡前泡上放冰箱"],
+      ["电子厨房秤", "¥25", "只用第一个月，建立分量感后可以停"],
+      ["喷油壶", "¥15", "最有效的控油工具"],
+      ["保鲜盒 3–4个", "¥40", "周末备餐用"],
+      ["体重秤（带体脂）", "¥60", "每天早上称"],
+      ["小电饭煲 1.5L", "¥90", "煮杂粮饭，可预约"],
+      ["软尺", "¥5", "量围度"]
+    ];
+    const PREP = ["电饭煲煮一锅杂粮饭，分装6份冷冻", "煮10个鸡蛋冷藏", "空气炸锅烤一盒鸡腿肉（去皮，孜然黑胡椒腌，200度20分钟），分3份", "洗切3天的青菜，沥干装盒冷藏", "3个1L水瓶塞茶包放冰箱"];
+
+    /* ══════════════ 工具 ══════════════ */
+    const pad = n => String(n).padStart(2, "0");
+    const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const parse = s => {
+      const [y, m, d] = s.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const WD = ["日", "一", "二", "三", "四", "五", "六"];
+    const dayIdx = k => Math.round((parse(k) - parse(START)) / 86400000);
+    const short = k => k.slice(5).replace("-", "/");
+    
+    const empty = () => ({
+      w: "", poop: null, period: false, water: 0,
+      b: null, l: null, s: null, d: null, tea: null, night: null, sport: null,
+      steps: "", sleep: "", vac: false, legs: false, angel: false, note: ""
+    });
+
+    const phaseOf = k => PHASES.find(p => dayIdx(k) < p.until) || PHASES[PHASES.length - 1];
+    
+    function mondayOf(d) {
+      const x = new Date(d);
+      x.setDate(x.getDate() - (x.getDay() + 6) % 7);
+      return x;
+    }
+    
+    function listFor(mk, custom) {
+      const base = MEALKEYS[mk][1];
+      return base.concat((custom[mk] || []).map(c => [c[0], c[1], 0, "custom"]));
+    }
+    
+    function kcal(rec, custom) {
+      if (!rec) return null;
+      const g = (mk, i) => i == null ? null : (listFor(mk, custom)[i] || [null, 0])[1];
+      const p = [g("b", rec.b), g("l", rec.l), g("s", rec.s), g("d", rec.d), rec.tea == null ? null : TEA[rec.tea][1], rec.night == null ? null : NIGHT[rec.night][1]];
+      return p.every(x => x == null) ? null : p.reduce((a, b) => a + (b || 0), 0);
+    }
+    
+    function touched(r) {
+      return !!(r && (r.w || r.poop != null || r.water || r.b != null || r.l != null || r.s != null || r.d != null || r.tea != null || r.night != null || r.sport != null || r.steps || r.note || r.period));
+    }
+    
+    function score(r) {
+      if (!touched(r)) return null;
+      let s = 0;
+      if (r.water >= 8) s++;
+      if (r.night != null && NIGHT[r.night][2] === "ok") s++;
+      if (r.tea != null && TEA[r.tea][2] === "ok") s++;
+      if (r.sport != null && r.sport >= 2) s++;
+      if (Number(r.steps) >= 6000) s++;
+      return s;
+    }
+    
+    function isFeast(r, custom) {
+      const f = (mk, i) => i != null && (listFor(mk, custom)[i] || [])[3] === "feast";
+      return f("l", r.l) || f("d", r.d);
+    }
+
+    function bedTarget(k) {
+      const i = dayIdx(k);
+      if (i < 0 || i > 8) return null;
+      const mins = 4 * 60 + 40 - i * 40;
+      const m = (mins % 1440 + 1440) % 1440;
+      return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+    }
+
+    /* ══════════════ 通用组件 ══════════════ */
+    /* 增加动画效果 */
+    const Cups = ({ n, onSet }) => (
+      React.createElement("div", { className: "cups" },
+        Array.from({ length: 8 }).map((_, i) => (
+          React.createElement("button", {
+            key: i,
+            className: "cup" + (i < n ? " on" : ""),
+            onClick: () => onSet(i + 1 === n ? i : i + 1),
+            "aria-label": `第${i + 1}杯 250毫升`
+          },
+            React.createElement("svg", { viewBox: "0 0 24 30", width: "100%", height: "100%" },
+              React.createElement("path", { d: "M4 4 h16 l-2 22 a2 2 0 0 1 -2 2 h-8 a2 2 0 0 1 -2 -2 z", className: "cup-body" }),
+              i < n && React.createElement("path", { d: "M5.2 9 h13.6 l-1.5 17 a2 2 0 0 1 -2 2 h-6.6 a2 2 0 0 1 -2 -2 z", className: "cup-fill" })
+            )
+          )
+        ))
+      )
+    );
+
+    const Seg = ({ options, value, onChange }) => (
+      React.createElement("div", { className: "seg" },
+        options.map((o, i) => (
+          React.createElement("button", {
+            key: i,
+            className: "seg-btn" + (value === i ? " on" : "") + (o[2] === "bad" && value === i ? " warn" : ""),
+            onClick: () => onChange(value === i ? null : i)
+          }, o[0])
+        ))
+      )
+    );
+
+    const Row = ({ time, label, hint, children }) => (
+      React.createElement("div", { className: "row" },
+        React.createElement("div", { className: "rail" },
+          React.createElement("span", { className: "time" }, time)
+        ),
+        React.createElement("div", { className: "rbody" },
+          React.createElement("div", { className: "rlabel" },
+            React.createElement("span", null, label),
+            hint && React.createElement("span", { className: "hint" }, hint)
+          ),
+          children
+        )
+      )
+    );
+
+    function MealPicker({ mk, rec, custom, upd, addCustom }) {
+      const [adding, setAdding] = useState(false);
+      const [nm, setNm] = useState("");
+      const [kc, setKc] = useState("");
+      const list = listFor(mk, custom);
+      const v = rec[mk];
+      return (
+        React.createElement(React.Fragment, null,
+          React.createElement("select", {
+            className: "picker",
+            value: v == null ? "" : v,
+            onChange: e => upd({ [mk]: e.target.value === "" ? null : Number(e.target.value) })
+          },
+            React.createElement("option", { value: "" }, "选一个你吃了啥 🤔"),
+            list.map((o, i) => React.createElement("option", { key: i, value: i }, o[2] ? `★ ${o[0]}` : o[0], o[3] === "custom" ? "（自建）" : ""))
+          ),
+          !adding ? (
+            React.createElement("button", { className: "tiny", onClick: () => setAdding(true) }, "＋ 加一个自己常吃的")
+          ) : (
+            React.createElement("div", { className: "addbox" },
+              React.createElement("input", { placeholder: "例如: 煎饺", value: nm, onChange: e => setNm(e.target.value) }),
+              React.createElement("input", { placeholder: "大卡", inputMode: "numeric", value: kc, onChange: e => setKc(e.target.value) }),
+              React.createElement("div", { className: "addbox-actions" },
+                React.createElement("button", { className: "add-save-btn", onClick: () => {
+                  if (nm && kc) { addCustom(mk, nm, Number(kc)); setNm(""); setKc(""); setAdding(false); }
+                } }, "存入"),
+                React.createElement("button", { className: "add-cancel-btn ghost", onClick: () => setAdding(false) }, "取消")
+              )
+            )
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 主组件 ══════════════ */
+    function App() {
+      const [tab, setTab] = useState("today");
+      const [core, setCore] = useState({ days: {}, measures: [], weekly: {}, custom: {} });
+      const [cur, setCur] = useState(() => key(new Date()));
+      const [ready, setReady] = useState(false);
+      const [err, setErr] = useState("");
+      const timer = useRef(null);
+      
+      useEffect(() => {
+        (async () => {
+          try {
+            const raw = localStorage.getItem("fatloss-core");
+            if (raw) {
+              const p = JSON.parse(raw);
+              setCore({ days: p.days || {}, measures: p.measures || [], weekly: p.weekly || {}, custom: p.custom || {} });
+            }
+          } catch (e) { }
+          setReady(true);
+        })();
+      }, []);
+      
+      const save = useCallback(next => {
+        setCore(next);
+        clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+          try {
+            localStorage.setItem("fatloss-core", JSON.stringify(next));
+            setErr("");
+          } catch (e) {
+            setErr("这次没存上：浏览器本地存储不可用或空间不足");
+          }
+        }, 400);
+      }, []);
+
+      const { days, measures, weekly, custom } = core;
+      const rec = days[cur] || empty();
+      const upd = patch => save({ ...core, days: { ...days, [cur]: { ...rec, ...patch } } });
+      const addCustom = (mk, name, k) => save({ ...core, custom: { ...custom, [mk]: [...(custom[mk] || []), [name, k]] } });
+      
+      const logged = useMemo(() => Object.entries(days).filter(([, v]) => v.w !== "" && v.w != null).map(([k, v]) => ({ k, w: Number(v.w), period: v.period })).sort((a, b) => a.k < b.k ? -1 : 1), [days]);
+      const avgOf = arr => arr.length ? arr.reduce((a, b) => a + b.w, 0) / arr.length : null;
+      const avg7 = avgOf(logged.slice(-7));
+      const avg7prev = avgOf(logged.slice(-14, -7));
+      const last = logged.length ? logged[logged.length - 1].w : null;
+      const plateau = avg7 != null && avg7prev != null && Math.abs(avg7 - avg7prev) < 0.15 && logged.length >= 14;
+      
+      const streaks = useMemo(() => {
+        const ks = Object.keys(days).sort().reverse();
+        let noNight = 0, water = 0, ok = true, ok2 = true;
+        for (const k of ks) {
+          const r = days[k];
+          if (!touched(r)) continue;
+          if (ok && r.night != null && NIGHT[r.night][2] === "ok") noNight++; else ok = false;
+          if (ok2 && r.water >= 8) water++; else ok2 = false;
+          if (!ok && !ok2) break;
+        }
+        return { noNight, water };
+      }, [days]);
+
+      if (!ready) return React.createElement("div", { className: "app" }, React.createElement(Style, null), React.createElement("div", { className: "loading" }, "正在打开你的记录…"));
+
+      const TABS = [["today", "今天"], ["log", "记录"], ["trend", "趋势"], ["body", "身体"], ["plan", "计划"]];
+
+      return (
+        React.createElement("div", { className: "app" },
+          React.createElement(Style, null),
+          tab === "today" && React.createElement(Today, { cur, setCur, rec, upd, custom, addCustom, err, streaks }),
+          tab === "log" && React.createElement(Log, { days, custom, setCur, setTab }),
+          tab === "trend" && React.createElement(Trend, { days, logged, avg7, avg7prev, last, plateau, custom, weekly, core, save, streaks }),
+          tab === "body" && React.createElement(Body, { measures, core, save, avg7 }),
+          tab === "plan" && React.createElement(Plan, { core, save }),
+          React.createElement("nav", { className: "tabs" },
+            TABS.map(([k, l]) => (
+              React.createElement("button", {
+                key: k,
+                className: "tab" + (tab === k ? " on" : ""),
+                onClick: () => setTab(k)
+              }, l)
+            ))
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 今天 ══════════════ */
+    function Today({ cur, setCur, rec, upd, custom, addCustom, err, streaks }) {
+      const dt = parse(cur);
+      const isToday = cur === key(new Date());
+      const i = dayIdx(cur);
+      const ph = phaseOf(cur);
+      const cal = kcal(rec, custom);
+      const sc = score(rec);
+      const bt = bedTarget(cur);
+      
+      const shift = n => {
+        const d = parse(cur);
+        d.setDate(d.getDate() + n);
+        setCur(key(d));
+      };
+
+      return (
+        React.createElement("div", { className: "page animate-fade-in" },
+          React.createElement("header", { className: "head" },
+            React.createElement("button", { className: "nav-btn", onClick: () => shift(-1) }, "‹"),
+            React.createElement("div", { className: "headmid" },
+              React.createElement("div", { className: "date" }, dt.getMonth() + 1, "月", dt.getDate(), "日 ", React.createElement("span", { className: "wd" }, "周", WD[dt.getDay()])),
+              React.createElement("div", { className: "sub" }, "第 ", Math.max(1, Math.floor(i / 7) + 1), " 周 · ", ph.name, " · ", ph.note)
+            ),
+            React.createElement("button", { className: "nav-btn", onClick: () => shift(1), disabled: isToday }, "›")
+          ),
+          
+          !isToday && React.createElement("button", { className: "backtoday", onClick: () => setCur(key(new Date())) }, "回到今天 ✨"),
+          
+          (streaks.noNight >= 3 || streaks.water >= 3) && React.createElement("div", { className: "streak" },
+            streaks.noNight >= 3 && React.createElement("span", null, "连续 ", React.createElement("b", null, streaks.noNight), " 天没吃夜宵"),
+            streaks.water >= 3 && React.createElement("span", null, "连续 ", React.createElement("b", null, streaks.water), " 天喝够水")
+          ),
+          
+          React.createElement("div", { className: "card-group" },
+            React.createElement(Row, { time: "07:30", label: "晨起体重", hint: "上完厕所、空腹" },
+              React.createElement("div", { className: "wrow" },
+                React.createElement("input", { className: "wnum", type: "number", step: "0.1", inputMode: "decimal", placeholder: "64.0", value: rec.w, onChange: e => upd({ w: e.target.value }) }),
+                React.createElement("span", { className: "unit" }, "kg"),
+                rec.w ? React.createElement("span", { className: "jin" }, (Number(rec.w) * 2).toFixed(1), " 斤") : null
+              ),
+              React.createElement("div", { className: "toggles" },
+                React.createElement("span", { className: "tlabel" }, "排便"),
+                React.createElement("button", { className: "pill" + (rec.poop === true ? " on" : ""), onClick: () => upd({ poop: rec.poop === true ? null : true }) }, "有 💩"),
+                React.createElement("button", { className: "pill" + (rec.poop === false ? " on warn" : ""), onClick: () => upd({ poop: rec.poop === false ? null : false }) }, "没有"),
+                React.createElement("button", { className: "pill" + (rec.period ? " on period" : ""), onClick: () => upd({ period: !rec.period }) }, "姨妈期 🩸")
+              ),
+              rec.period && React.createElement("p", { className: "inline-note" }, "姨妈期不看体重！好好休息，训练降强度。")
+            )
+          ),
+
+          React.createElement("div", { className: "card-group" },
+            React.createElement(Row, { time: "全天", label: "喝了多少", hint: "目标 8 杯" },
+              React.createElement(Cups, { n: rec.water, onSet: n => upd({ water: n }) }),
+              React.createElement("div", { className: "waterline" }, React.createElement("strong", null, rec.water * 250), " ml", React.createElement("span", { className: "tip" }, "早起第一杯温柠檬水，一口气喝完。"))
+            )
+          ),
+
+          React.createElement("div", { className: "card-group" },
+            Object.entries(MEALKEYS).map(([mk, [label]]) => (
+              React.createElement(Row, {
+                key: mk,
+                time: { b: "08:00", l: "12:00", s: "15:00", d: "18:30" }[mk],
+                label: label,
+                hint: mk === "s" ? "加餐别省，晚上才不会饿" : undefined
+              },
+                React.createElement(MealPicker, { mk, rec, custom, upd, addCustom })
+              )
+            ))
+          ),
+
+          React.createElement("div", { className: "card-group" },
+            React.createElement(Row, { time: "随时", label: "奶茶诱惑" },
+              React.createElement(Seg, { options: TEA, value: rec.tea, onChange: v => upd({ tea: v }) }),
+              rec.tea === 3 && React.createElement("p", { className: "inline-note warn" }, "这杯占了三分之一热量！下次试试去糖吧。")
+            )
+          ),
+
+          React.createElement("div", { className: "card-group" },
+            React.createElement(Row, { time: "20:00", label: "运动" },
+              React.createElement("select", { className: "picker", value: rec.sport == null ? "" : rec.sport, onChange: e => upd({ sport: e.target.value === "" ? null : Number(e.target.value) }) },
+                React.createElement("option", { value: "" }, "选一项"),
+                SPORT.map((s, j) => React.createElement("option", { key: j, value: j }, s))
+              ),
+              React.createElement("div", { className: "wrow mt" },
+                React.createElement("input", { className: "wnum sm", type: "number", inputMode: "numeric", placeholder: "步数", value: rec.steps, onChange: e => upd({ steps: e.target.value }) }),
+                React.createElement("span", { className: "unit" }, "步 👣")
+              )
+            )
+          ),
+
+          React.createElement("div", { className: "card-group" },
+            React.createElement(Row, { time: "22:30", label: "睡前仪式" },
+              React.createElement("div", { className: "toggles wrap" },
+                React.createElement("button", { className: "pill" + (rec.vac ? " on" : ""), onClick: () => upd({ vac: !rec.vac }) }, "真空腹 3×15秒"),
+                React.createElement("button", { className: "pill" + (rec.legs ? " on" : ""), onClick: () => upd({ legs: !rec.legs }) }, "靠墙抬腿 10分钟"),
+                React.createElement("button", { className: "pill" + (rec.angel ? " on" : ""), onClick: () => upd({ angel: !rec.angel }) }, "靠墙天使 2×10")
+              ),
+              React.createElement("div", { className: "wrow mt mb" }, React.createElement("span", { className: "tlabel" }, "夜宵")),
+              React.createElement(Seg, { options: NIGHT, value: rec.night, onChange: v => upd({ night: v }) }),
+              React.createElement("div", { className: "wrow mt" },
+                React.createElement("span", { className: "tlabel" }, "入睡"),
+                React.createElement("input", { className: "wnum sm", type: "time", value: rec.sleep, onChange: e => upd({ sleep: e.target.value }) })
+              ),
+              bt && React.createElement("p", { className: "inline-note" }, "今天的目标是 ", bt, " 前睡，早点睡不会饿。")
+            )
+          ),
+
+          React.createElement("div", { className: "card-group last" },
+            React.createElement(Row, { time: "📝", label: "今日心情与备注" },
+              React.createElement("textarea", { className: "note textarea", placeholder: "记录一下今天的小确幸或小挑战...", value: rec.note, onChange: e => upd({ note: e.target.value }), rows: 2 })
+            )
+          ),
+
+          React.createElement("div", { className: "tally" },
+            React.createElement("div", { className: "tcell" },
+              React.createElement("span", { className: "tnum" }, cal == null ? "—" : cal),
+              React.createElement("span", { className: "tlab" }, "摄入大卡")
+            ),
+            React.createElement("div", { className: "tcell" },
+              React.createElement("span", { className: "tnum highlight" }, sc == null ? "—" : `${sc}/5`),
+              React.createElement("span", { className: "tlab" }, "完美度")
+            )
+          ),
+          
+          React.createElement("p", { className: "foot text-center" }, "达标分：喝够水 · 无夜宵 · 控糖 · 有运动 · 步数达标。每周5次满分就很棒了！🌟"),
+          
+          err && React.createElement("p", { className: "err" }, err),
+          
+          dayIdx(cur) < 14 && React.createElement("div", { className: "rulebox" },
+            React.createElement("h4", { className: "h4" }, "前两周专注这6件小事："),
+            React.createElement("ol", { className: "ol" }, RULES1.map((r, j) => React.createElement("li", { key: j }, r))),
+            React.createElement("p", { className: "foot" }, "不需要过度节食，调整顺序和作息才是关键。")
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 记录 ══════════════ */
+    function Log({ days, custom, setCur, setTab }) {
+      const [filter, setFilter] = useState("all");
+      const list = Object.entries(days).filter(([, v]) => touched(v)).sort((a, b) => a[0] < b[0] ? 1 : -1);
+      const shown = list.filter(([, v]) => {
+        if (filter === "bad") return (v.night != null && NIGHT[v.night][2] === "bad") || v.tea === 3 || isFeast(v, custom);
+        if (filter === "note") return !!v.note;
+        if (filter === "period") return v.period;
+        return true;
+      });
+
+      const jump = k => {
+        setCur(k);
+        setTab("today");
+      };
+
+      return (
+        React.createElement("div", { className: "page animate-fade-in" },
+          React.createElement("header", { className: "head simple" },
+            React.createElement("div", { className: "headmid" },
+              React.createElement("div", { className: "date" }, "时光机 🕰️"),
+              React.createElement("div", { className: "sub" }, "已经记录了 ", list.length, " 天")
+            )
+          ),
+          React.createElement("div", { className: "filters" },
+            [["all", "全能看"], ["bad", "小翻车 🙈"], ["note", "有碎碎念 📝"], ["period", "姨妈期 🩸"]].map(([k, l]) => (
+              React.createElement("button", {
+                key: k,
+                className: "fbtn" + (filter === k ? " on" : ""),
+                onClick: () => setFilter(k)
+              }, l)
+            ))
+          ),
+          
+          React.createElement("div", { className: "log-list" },
+            shown.length === 0 && React.createElement("div", { className: "empty-state" },
+              React.createElement("div", { className: "empty-icon" }, "🍃"),
+              React.createElement("p", null, "这里干干净净的。去「今天」写下第一笔吧！")
+            ),
+            
+            shown.map(([k, v]) => {
+              const sc = score(v), c = kcal(v, custom);
+              const flags = [];
+              if (v.night != null && NIGHT[v.night][2] === "bad") flags.push("夜宵");
+              if (v.tea === 3) flags.push("全糖");
+              if (isFeast(v, custom)) flags.push("大餐");
+              if (v.period) flags.push("姨妈");
+              
+              return (
+                React.createElement("button", { className: "lrow card", key: k, onClick: () => jump(k) },
+                  React.createElement("div", { className: "ldate-block" },
+                    React.createElement("span", { className: "ldate" }, short(k)),
+                    React.createElement("span", { className: "lwd" }, "周", WD[parse(k).getDay()])
+                  ),
+                  React.createElement("div", { className: "lcontent" },
+                    React.createElement("div", { className: "ltop" },
+                      React.createElement("span", { className: "lw" }, v.w ? (Number(v.w) * 2).toFixed(1) : "—", React.createElement("em", null, "斤")),
+                      React.createElement("span", { className: "lc" }, c ?? "—", " ", React.createElement("em", null, "kcal"))
+                    ),
+                    React.createElement("div", { className: "lbottom" },
+                      React.createElement("span", { className: "ldots" },
+                        sc == null ? "—" : Array.from({ length: 5 }).map((_, j) => React.createElement("i", { key: j, className: "dot" + (j < sc ? " on" : "") }))
+                      ),
+                      React.createElement("span", { className: "lflags" },
+                        flags.map(f => React.createElement("em", { key: f, className: "tag " + (f === '姨妈' ? 'tag-period' : 'tag-warn') }, f))
+                      )
+                    ),
+                    v.note && React.createElement("div", { className: "lnote" }, v.note)
+                  )
+                )
+              );
+            })
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 趋势 ══════════════ */
+    function Trend({ days, logged, avg7, avg7prev, last, plateau, custom, weekly, core, save, streaks }) {
+      const chart = logged.slice(-90).map((p, i, arr) => {
+        const win = arr.slice(Math.max(0, i - 6), i + 1);
+        return { d: short(p.k), w: +(p.w * 2).toFixed(1), a: +(win.reduce((s, x) => s + x.w, 0) / win.length * 2).toFixed(1) };
+      });
+      const weeks = useMemo(() => {
+        const map = {};
+        Object.entries(days).filter(([, v]) => touched(v)).forEach(([k, v]) => {
+          const m = key(mondayOf(parse(k)));
+          (map[m] = map[m] || []).push(v);
+        });
+        return Object.entries(map).sort((a, b) => a[0] < b[0] ? 1 : -1).map(([m, l]) => {
+          const ws = l.map(v => Number(v.w)).filter(n => n > 0);
+          const cs = l.map(v => kcal(v, custom)).filter(n => n != null);
+          const ss = l.map(score).filter(n => n != null);
+          return {
+            m, label: `${short(m)} 那周`, n: l.length,
+            avg: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length * 2 : null,
+            cal: cs.length ? cs.reduce((a, b) => a + b, 0) / cs.length : null,
+            sc: ss.length ? ss.reduce((a, b) => a + b, 0) / ss.length : null,
+            poop: l.filter(v => v.poop === true).length,
+            water: l.filter(v => v.water >= 8).length,
+            sport: l.filter(v => v.sport != null && v.sport >= 2).length,
+            night: l.filter(v => v.night != null && NIGHT[v.night][2] === "bad").length,
+            sugar: l.filter(v => v.tea === 3).length,
+            feast: l.filter(v => isFeast(v, custom)).length
+          };
+        });
+      }, [days, custom]);
+
+      const setRefl = (m, field, val) => save({ ...core, weekly: { ...weekly, [m]: { ...(weekly[m] || {}), [field]: val } } });
+      const doneKg = avg7 != null ? START_KG - avg7 : 0;
+      const pct = Math.min(100, Math.max(0, doneKg / (START_KG - GOAL_KG) * 100));
+
+      return (
+        React.createElement("div", { className: "page animate-fade-in" },
+          React.createElement("header", { className: "head simple" },
+            React.createElement("div", { className: "headmid" },
+              React.createElement("div", { className: "date" }, "趋势 📈"),
+              React.createElement("div", { className: "sub" }, "每天称，但只看7天平均线")
+            )
+          ),
+          
+          React.createElement("div", { className: "bignums" },
+            React.createElement("div", { className: "bignum-card" },
+              React.createElement("span", { className: "bl" }, "最新数字"),
+              React.createElement("span", { className: "bn" }, last ? (last * 2).toFixed(1) : "—")
+            ),
+            React.createElement("div", { className: "bignum-card highlight" },
+              React.createElement("span", { className: "bl" }, "7天平均 (看这个)"),
+              React.createElement("span", { className: "bn" }, avg7 ? (avg7 * 2).toFixed(1) : "—")
+            ),
+            React.createElement("div", { className: "bignum-card" },
+              React.createElement("span", { className: "bl" }, "已经甩掉"),
+              React.createElement("span", { className: "bn" }, avg7 ? (doneKg * 2).toFixed(1) : "—")
+            )
+          ),
+          
+          React.createElement("div", { className: "prog-card card" },
+            React.createElement("div", { className: "proglab top" },
+              React.createElement("span", null, "起点 128"),
+              React.createElement("span", { className: "goal" }, "目标 100")
+            ),
+            React.createElement("div", { className: "progbar" },
+              React.createElement("div", { className: "progfill", style: { width: `${pct}%` } })
+            ),
+            React.createElement("div", { className: "proglab bottom text-center" },
+              React.createElement("span", null, avg7 ? `还差 ${((avg7 - GOAL_KG) * 2).toFixed(1)} 斤，继续加油！` : "动起来！")
+            )
+          ),
+
+          chart.length > 1 ? (
+            React.createElement("div", { className: "chart card" },
+              React.createElement(ResponsiveContainer, { width: "100%", height: 240 },
+                React.createElement(LineChart, { data: chart, margin: { top: 10, right: 10, left: -20, bottom: 0 } },
+                  React.createElement(XAxis, { dataKey: "d", tick: { fontSize: 10, fill: "#A8A8A8" }, tickLine: false, axisLine: false, minTickGap: 30 }),
+                  React.createElement(YAxis, { domain: ["dataMin - 1", "dataMax + 1"], tick: { fontSize: 10, fill: "#A8A8A8", fontWeight: "bold" }, tickLine: false, axisLine: false, width: 40 }),
+                  React.createElement(Tooltip, { contentStyle: { fontSize: 12, borderRadius: 12, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", padding: "8px 12px" } }),
+                  React.createElement(ReferenceLine, { y: OK_KG * 2, stroke: "#81B29A", strokeDasharray: "4 4", label: { position: 'insideTopLeft', value: '105 满意线', fill: '#81B29A', fontSize: 10 } }),
+                  React.createElement(ReferenceLine, { y: GOAL_KG * 2, stroke: "#E07A5F", strokeDasharray: "4 4", label: { position: 'insideBottomLeft', value: '100 终极目标', fill: '#E07A5F', fontSize: 10 } }),
+                  React.createElement(Line, { type: "monotone", dataKey: "w", name: "每日波动", stroke: "#E8E8E8", strokeWidth: 2, dot: false }),
+                  React.createElement(Line, { type: "monotone", dataKey: "a", name: "稳稳的平均线", stroke: "#E07A5F", strokeWidth: 3.5, dot: false })
+                )
+              ),
+              React.createElement("p", { className: "foot chart-note" }, "✨ 橘色是7天平均线，它才是你真实的体重变化。灰线是每日的水分和便便。")
+            )
+          ) : (
+            React.createElement("div", { className: "empty-state card" }, "多记几天体重，就会看到属于你的神奇曲线啦。")
+          ),
+
+          plateau && React.createElement("div", { className: "alert-card" },
+            React.createElement("b", null, "💡 嘿，遇到平台期了！"),
+            React.createElement("p", null, "连续两周没掉秤才算平台。别饿肚子！先试试每天多走3000步，或者留意下炒菜的油是不是放多了。稳住心态最重要！")
+          ),
+
+          React.createElement("h3", { className: "h3 mt-l" }, "每周小复盘 🌸"),
+          weeks.length === 0 && React.createElement("p", { className: "empty-state" }, "还不够一周呢，慢慢来。"),
+          weeks.map((w, i) => {
+            const prev = weeks[i + 1];
+            const diff = w.avg && prev && prev.avg ? w.avg - prev.avg : null;
+            const r = weekly[w.m] || {};
+            return (
+              React.createElement("div", { className: "wcard card", key: w.m },
+                React.createElement("div", { className: "wtop" },
+                  React.createElement("div", { className: "wlab" }, w.label, React.createElement("span", { className: "w-badge" }, w.n, "天")),
+                  React.createElement("div", { className: "wavg" },
+                    w.avg ? w.avg.toFixed(1) + " 斤" : "—",
+                    diff != null && React.createElement("span", { className: "diff " + (diff <= 0 ? "good" : "bad") }, diff > 0 ? "+" : "", diff.toFixed(1))
+                  )
+                ),
+                React.createElement("div", { className: "wgrid" },
+                  React.createElement("div", { className: "wg-item" }, React.createElement("span", null, "💧 喝够"), React.createElement("strong", null, w.water, "/", w.n)),
+                  React.createElement("div", { className: "wg-item" }, React.createElement("span", null, "🏃 运动"), React.createElement("strong", null, w.sport, "次")),
+                  React.createElement("div", { className: "wg-item" }, React.createElement("span", null, "🍲 大餐"), React.createElement("strong", { className: w.feast > 1 ? "warn" : "" }, w.feast, "次")),
+                  React.createElement("div", { className: "wg-item" }, React.createElement("span", null, "🔥 均卡"), React.createElement("strong", null, w.cal ? Math.round(w.cal) : "—")),
+                  React.createElement("div", { className: "wg-item" }, React.createElement("span", null, "⭐ 达标"), React.createElement("strong", null, w.sc ? w.sc.toFixed(1) : "—"))
+                ),
+                w.feast > 1 && React.createElement("div", { className: "inline-note warm mt" }, "这周聚餐有点多哦。记得以后大餐只吃菜肉，少碰主食和油炸，稳住就好！"),
+                React.createElement("div", { className: "refl" },
+                  React.createElement("input", { className: "refl-input", placeholder: "这周我觉得最难的是...", value: r.hard || "", onChange: e => setRefl(w.m, "hard", e.target.value) }),
+                  React.createElement("input", { className: "refl-input", placeholder: "下周我要尝试改变...", value: r.next || "", onChange: e => setRefl(w.m, "next", e.target.value) })
+                )
+              )
+            );
+          })
+        )
+      );
+    }
+
+    /* ══════════════ 身体 ══════════════ */
+    const FIELDS = [
+      ["waist", "腰围", 80, "66–69"], ["belly", "腹围", 83, "69–72"],
+      ["hip", "臀围", 99, "88–91"], ["thigh", "大腿", 59, "52–54"],
+      ["calf", "小腿", 37, "33–34"], ["arm", "上臂", 29, "24–25"],
+      ["ubust", "上胸", 97, "—"], ["lbust", "下胸", 78, "68–70"]
+    ];
+    function Body({ measures, core, save, avg7 }) {
+      const [draft, setDraft] = useState({});
+      const base = { date: START, waist: 80, belly: 83, hip: 99, thigh: 59, calf: 37, arm: 29, ubust: 97, lbust: 78 };
+      const all = [...measures, base].sort((a, b) => a.date < b.date ? 1 : -1);
+      const latest = all[0];
+      const waist = latest.waist ?? START_WAIST;
+      const pct = Math.min(100, Math.max(0, (START_WAIST - waist) / (START_WAIST - GOAL_WAIST) * 100));
+      const whr = latest.waist && latest.hip ? (latest.waist / latest.hip).toFixed(2) : null;
+
+      const commit = () => {
+        const e = { date: key(new Date()) };
+        FIELDS.forEach(([k]) => { if (draft[k]) e[k] = Number(draft[k]); });
+        if (Object.keys(e).length === 1) return;
+        save({ ...core, measures: [e, ...measures] });
+        setDraft({});
+      };
+
+      const del = i => save({ ...core, measures: measures.filter((_, j) => j !== i) });
+
+      return (
+        React.createElement("div", { className: "page animate-fade-in" },
+          React.createElement("header", { className: "head simple" },
+            React.createElement("div", { className: "headmid" },
+              React.createElement("div", { className: "date" }, "身型 👗"),
+              React.createElement("div", { className: "sub" }, "每两周量一次 · 穿衣好看才是王道")
+            )
+          ),
+          
+          React.createElement("div", { className: "waistcard card" },
+            React.createElement("div", { className: "w-header" },
+              React.createElement("div", { className: "w-title" }, "绝对主角：腰围"),
+              React.createElement("div", { className: "wbig" }, waist, React.createElement("em", null, "cm"))
+            ),
+            React.createElement("div", { className: "wsub" }, "起点 ", START_WAIST, " → 目标 66", whr && React.createElement("span", { className: "w-badge" }, "腰臀比 ", whr)),
+            React.createElement("div", { className: "progbar mt" },
+              React.createElement("div", { className: "progfill orange", style: { width: `${pct}%` } })
+            ),
+            React.createElement("p", { className: "wnote" }, "体重会骗人，衣服的松紧不会。腰围变细是你身材变化最明显的标志，坚持下去，很快就能穿回喜欢的衣服了！")
+          ),
+
+          React.createElement("h3", { className: "h3 mt-l" }, "小目标打卡点 🎯"),
+          React.createElement("div", { className: "mstable card" },
+            MILESTONES.map(([d, kg, ws, note]) => {
+              const hit = avg7 != null && avg7 <= kg;
+              return (
+                React.createElement("div", { className: "msrow" + (hit ? " hit" : ""), key: d },
+                  React.createElement("div", { className: "ms-info" },
+                    React.createElement("span", { className: "msd" }, "第", d / 7, "周"),
+                    React.createElement("span", { className: "msw" }, (kg * 2).toFixed(0), "斤"),
+                    React.createElement("span", { className: "msn" }, note)
+                  ),
+                  hit ? React.createElement("div", { className: "ms-check" }, "🌟") : React.createElement("div", { className: "ms-circle" })
+                )
+              );
+            })
+          ),
+
+          React.createElement("h3", { className: "h3 mt-l" }, "量一下新尺寸 📏"),
+          React.createElement("div", { className: "card p-4" },
+            React.createElement("div", { className: "mgrid" },
+              FIELDS.map(([k, label, st, goal]) => (
+                React.createElement("label", { className: "mfield", key: k },
+                  React.createElement("span", { className: "mlab" }, label, React.createElement("span", { className: "goal-text" }, st, " ➔ ", goal)),
+                  React.createElement("input", { className: "minput", type: "number", step: "0.5", inputMode: "decimal", placeholder: String(latest[k] ?? st), value: draft[k] ?? "", onChange: e => setDraft({ ...draft, [k]: e.target.value }) })
+                )
+              ))
+            ),
+            React.createElement("button", { className: "save mt-4", onClick: commit }, "保存今天的围度")
+          ),
+          React.createElement("p", { className: "foot text-center" }, "早上空腹量最准，尽量每次同一个姿势。软尺轻轻贴着皮肤就好，别把自己勒喘不过气哦！"),
+
+          React.createElement("h3", { className: "h3 mt-l" }, "尺寸日记 📖"),
+          React.createElement("div", { className: "history-list" },
+            all.map((m, i) => {
+              const prev = all[i + 1];
+              return (
+                React.createElement("div", { className: "mrow card", key: m.date + i },
+                  React.createElement("div", { className: "mrow-head" },
+                    React.createElement("span", { className: "mdate" }, i === all.length - 1 ? "🐣 起点" : short(m.date)),
+                    i < measures.length && React.createElement("button", { className: "del-btn", onClick: () => del(i) }, "删除")
+                  ),
+                  React.createElement("div", { className: "mvals" },
+                    FIELDS.filter(([k]) => m[k]).map(([k, l]) => {
+                      const dd = prev && prev[k] ? m[k] - prev[k] : null;
+                      return (
+                        React.createElement("div", { className: "mval-badge", key: k },
+                          React.createElement("span", { className: "mval-label" }, l),
+                          React.createElement("span", { className: "mval-num" }, m[k]),
+                          dd ? React.createElement("span", { className: "mval-diff " + (dd < 0 ? "good" : "bad") }, dd > 0 ? "+" : "", dd.toFixed(1)) : null
+                        )
+                      );
+                    })
+                  )
+                )
+              );
+            })
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 计划 ══════════════ */
+    function Plan({ core, save }) {
+      const [open, setOpen] = useState("rules");
+      const [msg, setMsg] = useState("");
+      const fileRef = useRef(null);
+
+      const S = ({ id, title, icon, children }) => (
+        React.createElement("div", { className: "acc card " + (open === id ? "is-open" : "") },
+          React.createElement("button", { className: "acch", onClick: () => setOpen(open === id ? "" : id) },
+            React.createElement("div", { className: "acc-title" }, React.createElement("span", { className: "acc-icon" }, icon), title),
+            React.createElement("div", { className: "chev" }, open === id ? "▴" : "▾")
+          ),
+          open === id && React.createElement("div", { className: "accb animate-fade-in" }, children)
+        )
+      );
+
+      const flash = (text, ms = 4000) => { setMsg(text); setTimeout(() => setMsg(""), ms); };
+
+      const exportData = () => {
+        try {
+          const payload = { app: "温暖减脂日记", version: 1, exportedAt: new Date().toISOString(), data: core };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const stamp = new Date().toISOString().slice(0, 10);
+          a.href = url; a.download = `减脂打卡备份_${stamp}.json`;
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+          flash("🎉 备份文件已导出，好好保存哦！");
+        } catch (e) { flash("导出失败，请检查浏览器权限。"); }
+      };
+
+      const importData = async event => {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = "";
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const raw = JSON.parse(text);
+          const source = raw && raw.data ? raw.data : raw;
+          const imported = {
+            days: source?.days && typeof source.days === "object" ? source.days : {},
+            measures: Array.isArray(source?.measures) ? source.measures : [],
+            weekly: source?.weekly && typeof source.weekly === "object" ? source.weekly : {},
+            custom: source?.custom && typeof source.custom === "object" ? source.custom : {}
+          };
+          if (!Object.keys(imported.days).length) throw new Error("empty");
+          if (!window.confirm("导入会覆盖当前的记录，确定要继续吗？")) return;
+          save(imported);
+          flash("✨ 备份恢复成功！欢迎回来。");
+        } catch (e) { flash("导入失败：看起来不是正确的备份文件哦。"); }
+      };
+
+      const reset = () => {
+        if (window.confirm("🚨 警告：这会清空你所有的努力记录，且无法恢复！确定吗？")) {
+          save({ days: {}, measures: [], weekly: {}, custom: {} });
+          flash("记录已清空，准备好重新出发！");
+        }
+      };
+
+      return (
+        React.createElement("div", { className: "page animate-fade-in" },
+          React.createElement("header", { className: "head simple" },
+            React.createElement("div", { className: "headmid" },
+              React.createElement("div", { className: "date" }, "攻略书 🗺️"),
+              React.createElement("div", { className: "sub" }, "128斤 → 100斤 的奇妙旅程")
+            )
+          ),
+
+          React.createElement("div", { className: "acc-group" },
+            React.createElement(S, { id: "rules", title: "前两周只做这6条", icon: "🌱" },
+              React.createElement("ol", { className: "ol nice-list" }, RULES1.map((r, i) => React.createElement("li", { key: i }, r))),
+              React.createElement("p", { className: "foot" }, "在家不做饭的这两周，三餐按家里的吃。吃饭顺序：先菜、再肉蛋、最后主食。遇到太油腻的菜，偷偷拿温水涮一下，能省下不少热量呢。")
+            ),
+
+            React.createElement(S, { id: "stage", title: "全程分五段打怪升级", icon: "🚀" },
+              React.createElement("div", { className: "stage-timeline" },
+                [["准备期", "第1–2周", "128 → 125斤", "只做6条规则，调作息"],
+                ["冲刺期", "第3–4周", "125 → 119斤", "上班了，建立三餐节奏"],
+                ["加速期", "第5–12周", "119 → 110斤", "完整菜单 + 每周4练"],
+                ["稳定期", "第13–20周", "110 → 103斤", "稳稳当当，每周约1斤"],
+                ["收尾期", "第21–24周", "103 → 100斤", "雕刻线条，塑形为主"]].map((r, i) => (
+                  React.createElement("div", { className: "stage-item", key: r[0] },
+                    React.createElement("div", { className: "stage-dot" }, i + 1),
+                    React.createElement("div", { className: "stage-content" },
+                      React.createElement("div", { className: "stage-header" },
+                        React.createElement("span", { className: "stage-name" }, r[0]),
+                        React.createElement("span", { className: "stage-weight" }, r[2])
+                      ),
+                      React.createElement("div", { className: "stage-desc" }, r[1], " · ", r[3])
+                    )
+                  )
+                ))
+              )
+            ),
+
+            React.createElement(S, { id: "drink", title: "开心喝水指南", icon: "🥤" },
+              React.createElement("div", { className: "bubble-list" },
+                React.createElement("div", { className: "bubble-item" }, React.createElement("b", null, "🍵 冷泡茶"), "睡前把茶包丢进1L冷水瓶放冰箱，第二天就能喝一整天，完全不苦涩！"),
+                React.createElement("div", { className: "bubble-item" }, React.createElement("b", null, "🍋 柠檬水"), "柠檬切片冷冻，每次丢2片，加点薄荷更清爽。"),
+                React.createElement("div", { className: "bubble-item" }, React.createElement("b", null, "🍓 水果茶"), "水里泡点草莓、橙子片或桃子块，自带天然果香。"),
+                React.createElement("div", { className: "bubble-item" }, React.createElement("b", null, "🧋 自制奶茶"), "浓茶底 + 200ml纯牛奶 + 零卡糖，不到两块钱，好喝无负担。")
+              ),
+              React.createElement("p", { className: "foot" }, "唯一的底线：拒绝游离糖和果汁！外出买奶茶尽量选择无糖去小料哦。")
+            ),
+
+            React.createElement(S, { id: "food", title: "食物红黑榜", icon: "🍱" },
+              FOODS.map(([t, v]) => (
+                React.createElement("div", { className: "food-cat", key: t },
+                  React.createElement("div", { className: "food-title" }, t),
+                  React.createElement("div", { className: "food-items" }, v)
+                )
+              )),
+              React.createElement("div", { className: "avoid-box mt-4" },
+                React.createElement("div", { className: "avoid-title" }, "⚠️ 尽量避开这些刺客"),
+                React.createElement("div", { className: "avoid-text" }, AVOID)
+              )
+            ),
+
+            React.createElement(S, { id: "train", title: "动起来的课表", icon: "💪" },
+              React.createElement("div", { className: "train-schedule" },
+                TRAINING.map(([d, t, n]) => (
+                  React.createElement("div", { className: "train-day", key: d },
+                    React.createElement("div", { className: "td-badge" }, d),
+                    React.createElement("div", { className: "td-content" },
+                      React.createElement("div", { className: "td-title" }, t),
+                      n && React.createElement("div", { className: "td-desc" }, n)
+                    )
+                  )
+                ))
+              ),
+              React.createElement("h4", { className: "h4 mt-l" }, "每天必做3分钟"),
+              React.createElement("div", { className: "daily3-list" },
+                DAILY3.map(([a, b, c]) => (
+                  React.createElement("div", { className: "daily3-item", key: a },
+                    React.createElement("b", null, a), React.createElement("span", null, b), React.createElement("em", null, c)
+                  )
+                ))
+              ),
+              React.createElement("p", { className: "foot text-center mt" }, "别练厚了侧腰！我们要的是沙漏形状。")
+            ),
+
+            React.createElement(S, { id: "fix", title: "遇到困难看这里", icon: "💡" },
+              React.createElement("div", { className: "fix-list" },
+                FIXES.map(([t, d]) => (
+                  React.createElement("div", { className: "fix-card", key: t },
+                    React.createElement("div", { className: "fix-q" }, "🤔 ", t),
+                    React.createElement("div", { className: "fix-a" }, d)
+                  )
+                ))
+              )
+            ),
+
+            React.createElement(S, { id: "data", title: "数据备份与安全", icon: "💾" },
+              React.createElement("p", { className: "p text-center" }, "数据都存在你的手机/电脑里，丢了找不回。记得定期备份！"),
+              React.createElement("div", { className: "backup-actions mt-4" },
+                React.createElement("button", { className: "btn-primary", onClick: exportData }, "📦 下载备份"),
+                React.createElement("button", { className: "btn-secondary", onClick: () => fileRef.current?.click() }, "📂 恢复记录"),
+                React.createElement("input", { ref: fileRef, className: "backup-file", type: "file", accept: "application/json,.json", onChange: importData })
+              ),
+              React.createElement("div", { className: "danger-zone mt-l" },
+                React.createElement("button", { className: "btn-danger", onClick: reset }, "⚠️ 清空全部数据")
+              ),
+              msg && React.createElement("div", { className: "toast-msg" }, msg)
+            )
+          )
+        )
+      );
+    }
+
+    /* ══════════════ 样式 ══════════════ */
+    function Style() {
+      return React.createElement("style", null, `
+        :root {
+          /* 温暖柔和的配色系 */
+          --bg-color: #FAF8F5; /* 奶油白背景 */
+          --card-bg: #FFFFFF;
+          --primary: #E07A5F; /* 暖橘色/桃木红 */
+          --primary-light: #F4A261;
+          --primary-hover: #D46A4D;
+          --secondary: #81B29A; /* 柔和的鼠尾草绿，用于点缀和图表 */
+          --secondary-light: #A8D5C2;
+          --accent: #F2CC8F; /* 暖黄色，用于高亮和部分标签 */
+          --text-main: #3D405B; /* 深蓝灰，比纯黑温和 */
+          --text-muted: #8E9BAE; /* 柔和的灰蓝色 */
+          --line: #F0EDE6; /* 极淡的边框色 */
+          --danger: #E63946;
+          --danger-light: #FDE8E9;
+          
+          --radius-sm: 10px;
+          --radius-md: 16px;
+          --radius-lg: 24px;
+          
+          --shadow-sm: 0 2px 8px rgba(61, 64, 91, 0.04);
+          --shadow-md: 0 8px 24px rgba(61, 64, 91, 0.06);
+          --shadow-float: 0 12px 32px rgba(224, 122, 95, 0.15);
+        }
+
+        body {
+          background-color: var(--bg-color);
+          color: var(--text-main);
+          font-family: 'Nunito', 'PingFang SC', 'Helvetica Neue', sans-serif; /* 偏圆润的英文字体 */
+          -webkit-font-smoothing: antialiased;
+          margin: 0;
+          padding: 0;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        .app {
+          min-height: 100vh;
+          max-width: 500px;
+          margin: 0 auto;
+          padding-bottom: 90px; /* 为底部 Tab 留出空间 */
+          background-color: var(--bg-color);
+          position: relative;
+        }
+
+        /* 动画 */
+        .animate-fade-in {
+          animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 基础结构 */
+        .page { padding: 0 20px; }
+        
+        .head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 0 16px;
+          margin-bottom: 8px;
+        }
+        .head.simple { margin-bottom: 4px; padding-bottom: 12px;}
+        .headmid { text-align: center; }
+        .head.simple .headmid { text-align: left; }
+        
+        .date {
+          font-size: 24px;
+          font-weight: 800;
+          color: var(--text-main);
+          letter-spacing: 0.5px;
+        }
+        .wd { font-size: 14px; font-weight: normal; color: var(--text-muted); margin-left: 6px; }
+        .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+        
+        /* 导航按钮 */
+        .nav-btn {
+          width: 44px; height: 44px;
+          border: none;
+          background: var(--card-bg);
+          border-radius: 50%;
+          font-size: 22px;
+          color: var(--text-main);
+          cursor: pointer;
+          box-shadow: var(--shadow-sm);
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .nav-btn:active { transform: scale(0.92); }
+        .nav-btn:disabled { opacity: 0.4; box-shadow: none; cursor: not-allowed; }
+        
+        .backtoday {
+          display: block; width: fit-content; margin: 0 auto 16px;
+          padding: 8px 16px; border: none; background: #FFF6F3;
+          color: var(--primary); font-size: 13px; font-weight: bold;
+          border-radius: 20px; cursor: pointer; transition: 0.2s;
+        }
+        .backtoday:active { transform: scale(0.95); }
+
+        /* 卡片化分组 */
+        .card-group {
+          background: var(--card-bg);
+          border-radius: var(--radius-lg);
+          padding: 16px 20px;
+          margin-bottom: 16px;
+          box-shadow: var(--shadow-sm);
+        }
+        .card-group.last { margin-bottom: 24px; }
+        .card {
+          background: var(--card-bg);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-sm);
+          border: none;
+        }
+
+        /* 行布局 */
+        .row {
+          display: flex; gap: 16px;
+          padding: 16px 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .row:last-child { border-bottom: none; padding-bottom: 4px; }
+        .row:first-child { padding-top: 4px; }
+        
+        .rail { width: 44px; flex: none; padding-top: 2px; }
+        .time { font-size: 13px; font-weight: 700; color: var(--text-muted); opacity: 0.8;}
+        
+        .rbody { flex: 1; min-width: 0; }
+        .rlabel {
+          font-size: 15px; font-weight: 700; margin-bottom: 12px;
+          display: flex; flex-direction: column; gap: 4px;
+        }
+        .hint { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+        /* 输入与选择 */
+        .wrow { display: flex; align-items: baseline; gap: 8px; }
+        .wrow.mt { margin-top: 14px; }
+        .wrow.mb { margin-bottom: 10px; }
+        
+        input, select, textarea {
+          border: 1px solid var(--line);
+          background: var(--bg-color);
+          color: var(--text-main);
+          font-family: inherit;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+          border-color: var(--primary-light);
+          background: var(--card-bg);
+          box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.1);
+        }
+        
+        .wnum {
+          width: 100px; padding: 12px 14px;
+          border-radius: 12px;
+          font-size: 20px; font-weight: bold;
+        }
+        .wnum.sm { width: 110px; font-size: 16px; padding: 10px 12px; }
+        .unit { font-size: 14px; color: var(--text-muted); font-weight: 600;}
+        .jin { margin-left: auto; font-size: 14px; color: var(--primary); font-weight: bold; background: #FFF6F3; padding: 4px 10px; border-radius: 8px;}
+        
+        .picker {
+          width: 100%; padding: 14px 16px;
+          border-radius: 14px;
+          font-size: 14px; font-weight: 500;
+          appearance: none;
+          background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238E9BAE%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+          background-repeat: no-repeat, repeat;
+          background-position: right .7em top 50%, 0 0;
+          background-size: .65em auto, 100%;
+        }
+
+        /* 药丸按钮组 */
+        .toggles, .seg { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .tlabel { font-size: 13px; color: var(--text-muted); font-weight: bold; margin-right: 4px;}
+        
+        .pill, .seg-btn {
+          padding: 8px 16px;
+          border: 1px solid var(--line);
+          border-radius: 20px;
+          background: var(--bg-color);
+          font-size: 13px; font-weight: 600; color: var(--text-muted);
+          cursor: pointer; transition: all 0.2s;
+        }
+        .pill.on, .seg-btn.on {
+          background: var(--primary); border-color: var(--primary); color: #fff;
+          box-shadow: 0 4px 10px rgba(224, 122, 95, 0.25);
+        }
+        .pill.on.warn, .seg-btn.on.warn {
+          background: var(--danger); border-color: var(--danger);
+          box-shadow: 0 4px 10px rgba(230, 57, 70, 0.2);
+        }
+        .pill.on.period {
+          background: #E5989B; border-color: #E5989B;
+        }
+        
+        .pill:active, .seg-btn:active { transform: scale(0.94); }
+
+        /* 水杯 */
+        .cups { display: flex; gap: 6px; margin: 8px 0; }
+        .cup {
+          flex: 1; max-width: 32px; padding: 0; border: none; background: none;
+          cursor: pointer; aspect-ratio: 24/30; transition: transform 0.2s;
+        }
+        .cup:active { transform: scale(0.85); }
+        .cup-body { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;}
+        .cup.on .cup-body { stroke: var(--secondary); }
+        .cup-fill { fill: var(--secondary-light); transition: opacity 0.3s; }
+        .waterline { margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+        .waterline strong { font-size: 20px; color: var(--secondary); margin-right: 4px;}
+        .tip { display: block; margin-top: 6px; font-size: 12px; line-height: 1.6; }
+
+        /* 自定义食物添加 */
+        .tiny {
+          margin-top: 12px; padding: 8px 12px; border: none; background: #FFF6F3;
+          border-radius: 8px; color: var(--primary); font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+        .addbox {
+          display: flex; flex-direction: column; gap: 10px; margin-top: 12px;
+          background: var(--bg-color); padding: 14px; border-radius: 12px;
+        }
+        .addbox input { padding: 10px 12px; border-radius: 8px; font-size: 14px; width: 100%;}
+        .addbox-actions { display: flex; gap: 8px; }
+        .addbox button { padding: 10px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; flex: 1; transition: 0.2s;}
+        .add-save-btn { background: var(--secondary); color: #fff; }
+        .add-cancel-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--line) !important; }
+        .addbox button:active { transform: scale(0.96); }
+
+        /* 底部统计卡片 */
+        .tally { display: flex; gap: 12px; margin: 0 0 16px; }
+        .tcell {
+          flex: 1; background: var(--card-bg); border-radius: var(--radius-lg);
+          padding: 20px 16px; text-align: center; box-shadow: var(--shadow-sm);
+        }
+        .tnum { display: block; font-size: 32px; font-weight: 800; color: var(--text-main); }
+        .tnum.highlight { color: var(--primary); }
+        .tlab { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
+        
+        /* 文本和提示 */
+        .note.textarea { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; resize: none; line-height: 1.5; }
+        .inline-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); background: var(--bg-color); padding: 10px 12px; border-radius: 8px;}
+        .inline-note.warn { background: var(--danger-light); color: var(--danger); }
+        .inline-note.warm { background: #FFF6F3; color: var(--primary-hover); }
+        
+        .foot { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin: 0 0 24px; }
+        .text-center { text-align: center; }
+        .mt { margin-top: 12px; }
+        .mt-l { margin-top: 32px; }
+        
+        /* 连胜标签 */
+        .streak {
+          display: flex; gap: 10px; margin-bottom: 20px;
+        }
+        .streak span {
+          background: linear-gradient(135deg, #FFD166 0%, #F4A261 100%);
+          color: #fff; font-size: 12px; font-weight: 600;
+          padding: 8px 14px; border-radius: 20px;
+          box-shadow: 0 4px 10px rgba(244, 162, 97, 0.3);
+        }
+        
+        /* 规则卡片 */
+        .rulebox { background: var(--secondary-light); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; color: #2B4B3D; }
+        .rulebox .h4 { margin: 0 0 12px; font-size: 15px; color: #1E362A; }
+        .rulebox .ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8; font-weight: 500;}
+        .rulebox .foot { margin: 16px 0 0; color: #2B4B3D; opacity: 0.8; }
+
+        /* ======== 记录页 ======== */
+        .filters { display: flex; gap: 8px; margin: 16px 0; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+        .fbtn {
+          flex: none; padding: 8px 16px; border: none; border-radius: 20px;
+          background: var(--card-bg); font-size: 13px; font-weight: bold; color: var(--text-muted);
+          cursor: pointer; box-shadow: var(--shadow-sm); transition: 0.2s;
+        }
+        .fbtn.on { background: var(--text-main); color: #fff; }
+        
+        .log-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px;}
+        .lrow {
+          width: 100%; text-align: left; padding: 16px; cursor: pointer;
+          display: flex; gap: 16px; align-items: stretch; transition: transform 0.2s;
+        }
+        .lrow:active { transform: scale(0.98); }
+        
+        .ldate-block { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 48px; background: var(--bg-color); border-radius: 12px; padding: 8px 0; }
+        .ldate { font-size: 14px; font-weight: 800; color: var(--text-main); }
+        .lwd { font-size: 11px; font-weight: bold; color: var(--text-muted); margin-top: 4px; }
+        
+        .lcontent { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px;}
+        .ltop { display: flex; justify-content: space-between; align-items: baseline; }
+        .lw { font-size: 20px; font-weight: 800; color: var(--primary); }
+        .lw em { font-size: 12px; font-weight: bold; font-style: normal; margin-left: 2px; color: var(--text-muted); }
+        .lc { font-size: 15px; font-weight: bold; color: var(--text-main); }
+        .lc em { font-size: 11px; color: var(--text-muted); font-style: normal;}
+        
+        .lbottom { display: flex; justify-content: space-between; align-items: center; }
+        .ldots { display: flex; gap: 4px; }
+        .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--line); display: block; }
+        .dot.on { background: var(--accent); }
+        
+        .lflags { display: flex; gap: 6px; }
+        .tag { font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 6px; font-style: normal; }
+        .tag-warn { background: var(--danger-light); color: var(--danger); }
+        .tag-period { background: #FDE8EC; color: #D76A7D; }
+        
+        .lnote { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-top: 4px; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; }
+
+        /* ======== 趋势页 ======== */
+        .bignums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+        .bignum-card { background: var(--card-bg); padding: 16px 10px; border-radius: 16px; text-align: center; box-shadow: var(--shadow-sm); }
+        .bignum-card.highlight { background: var(--primary); color: #fff; box-shadow: var(--shadow-float); }
+        .bignum-card.highlight .bl { color: rgba(255,255,255,0.8); }
+        .bn { display: block; font-size: 24px; font-weight: 800; line-height: 1.2; }
+        .bl { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+
+        .prog-card { padding: 20px; margin-bottom: 24px; }
+        .proglab { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; }
+        .proglab.top { margin-bottom: 12px; color: var(--text-muted); }
+        .proglab.bottom { margin-top: 12px; color: var(--primary); justify-content: center; font-size: 14px;}
+        .goal { color: var(--primary); }
+        .progbar { height: 12px; background: var(--bg-color); border-radius: 6px; overflow: hidden; }
+        .progfill { height: 100%; background: var(--primary); border-radius: 6px; transition: width 0.5s ease-out; }
+        .progfill.orange { background: var(--primary-light); }
+
+        .chart { padding: 20px 10px 16px; margin-bottom: 24px; }
+        .chart-note { margin: 16px 10px 0; text-align: center; }
+
+        .alert-card { background: #FFF6F3; border-radius: 16px; padding: 20px; margin-bottom: 24px; color: var(--primary-hover); }
+        .alert-card b { font-size: 15px; display: block; margin-bottom: 8px; }
+        .alert-card p { margin: 0; font-size: 13px; line-height: 1.6; font-weight: 500;}
+
+        .wcard { padding: 20px; margin-bottom: 16px; }
+        .wtop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--line); }
+        .wlab { font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 8px;}
+        .w-badge { background: var(--bg-color); padding: 4px 8px; border-radius: 6px; font-size: 11px; color: var(--text-muted); }
+        .wavg { font-size: 22px; font-weight: 800; display: flex; align-items: baseline; gap: 8px;}
+        .diff { font-size: 13px; font-weight: bold; padding: 2px 6px; border-radius: 6px; }
+        .diff.good { background: #E8F5E9; color: #2E7D32; }
+        .diff.bad { background: var(--danger-light); color: var(--danger); }
+
+        .wgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .wg-item { display: flex; justify-content: space-between; font-size: 13px; background: var(--bg-color); padding: 10px 12px; border-radius: 10px;}
+        .wg-item span { color: var(--text-muted); font-weight: 600;}
+        .wg-item strong { color: var(--text-main); font-weight: 800; }
+        .wg-item strong.warn { color: var(--danger); }
+
+        .refl-input { width: 100%; padding: 12px 14px; border: none; background: var(--bg-color); border-radius: 10px; font-size: 13px; margin-top: 8px; }
+
+        /* ======== 身体页 ======== */
+        .waistcard { padding: 24px; margin-bottom: 24px; position: relative; overflow: hidden; }
+        .w-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+        .w-title { font-size: 18px; font-weight: 800; }
+        .wbig { font-size: 48px; font-weight: 900; color: var(--primary); line-height: 1; }
+        .wbig em { font-size: 16px; font-style: normal; color: var(--text-muted); margin-left: 4px; font-weight: bold;}
+        .wsub { font-size: 13px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .wnote { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 16px 0 0; font-weight: 500;}
+
+        .mstable { padding: 12px 20px; margin-bottom: 24px; }
+        .msrow { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+        .msrow:last-child { border-bottom: none; }
+        .ms-info { display: flex; flex-direction: column; gap: 4px; }
+        .msrow.hit .ms-info { opacity: 0.6; }
+        .msd { font-size: 12px; font-weight: bold; color: var(--text-muted); }
+        .msw { font-size: 16px; font-weight: 800; color: var(--text-main); }
+        .msrow.hit .msw { text-decoration: line-through; }
+        .msn { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .ms-circle { width: 24px; height: 24px; border: 2px solid var(--line); border-radius: 50%; }
+        .ms-check { font-size: 24px; }
+
+        .p-4 { padding: 20px; margin-bottom: 24px;}
+        .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .mfield { display: flex; flex-direction: column; gap: 8px; }
+        .mlab { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline;}
+        .goal-text { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+        .minput { font-size: 18px; font-weight: bold; text-align: center; padding: 12px; border-radius: 12px; border: none; background: var(--bg-color); }
+        
+        .history-list { display: flex; flex-direction: column; gap: 12px; }
+        .mrow { padding: 16px; }
+        .mrow-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+        .mdate { font-size: 14px; font-weight: bold; }
+        .del-btn { border: none; background: var(--danger-light); color: var(--danger); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .mvals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .mval-badge { display: flex; align-items: baseline; background: var(--bg-color); padding: 8px 12px; border-radius: 8px; gap: 6px;}
+        .mval-label { font-size: 12px; color: var(--text-muted); font-weight: 600; flex: none; }
+        .mval-num { font-size: 15px; font-weight: 800; }
+        .mval-diff { font-size: 11px; font-weight: bold; margin-left: auto; }
+
+        /* ======== 计划页 ======== */
+        .acc-group { display: flex; flex-direction: column; gap: 12px; margin-top: 16px;}
+        .acc { padding: 0 20px; transition: 0.3s; }
+        .acc.is-open { box-shadow: var(--shadow-md); }
+        .acch {
+          width: 100%; display: flex; justify-content: space-between; align-items: center;
+          padding: 20px 0; border: none; background: none;
+          font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer;
+        }
+        .acc-title { display: flex; align-items: center; gap: 10px; }
+        .acc-icon { font-size: 20px; }
+        .accb { padding-bottom: 20px; }
+        .chev { font-size: 18px; color: var(--text-muted); transition: 0.3s; }
+
+        .nice-list li { margin-bottom: 12px; padding-left: 4px; font-weight: 600; font-size: 14px;}
+        .nice-list li::marker { color: var(--primary); font-weight: 900; }
+
+        /* Timeline */
+        .stage-timeline { position: relative; padding-left: 24px; margin-top: 8px; }
+        .stage-timeline::before {
+          content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px;
+          width: 2px; background: var(--line); border-radius: 1px;
+        }
+        .stage-item { position: relative; margin-bottom: 24px; }
+        .stage-item:last-child { margin-bottom: 0; }
+        .stage-dot {
+          position: absolute; left: -24px; top: 2px; width: 18px; height: 18px;
+          background: var(--primary); color: #fff; border-radius: 50%;
+          font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 0 0 4px var(--card-bg);
+        }
+        .stage-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+        .stage-name { font-size: 15px; font-weight: 800; }
+        .stage-weight { font-size: 13px; color: var(--primary); font-weight: bold; background: #FFF6F3; padding: 2px 8px; border-radius: 6px;}
+        .stage-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; font-weight: 500;}
+
+        /* Bubbles */
+        .bubble-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;}
+        .bubble-item { background: var(--bg-color); padding: 14px 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+        .bubble-item b { display: block; margin-bottom: 4px; color: var(--primary-hover); font-size: 15px;}
+
+        /* Foods */
+        .food-cat { margin-bottom: 16px; }
+        .food-title { font-size: 14px; font-weight: 800; margin-bottom: 8px; display: inline-block; background: var(--secondary-light); padding: 4px 10px; border-radius: 8px; color: #1E362A; }
+        .food-items { font-size: 14px; line-height: 1.7; color: var(--text-main); font-weight: 500; padding-left: 4px;}
+        .avoid-box { background: var(--danger-light); padding: 16px; border-radius: 12px; }
+        .avoid-title { font-weight: bold; color: var(--danger); margin-bottom: 8px; font-size: 14px;}
+        .avoid-text { font-size: 13px; color: var(--danger); line-height: 1.7; opacity: 0.9; }
+
+        /* Train */
+        .train-schedule { display: flex; flex-direction: column; gap: 12px; }
+        .train-day { display: flex; gap: 12px; background: var(--bg-color); padding: 12px; border-radius: 12px; align-items: center; }
+        .td-badge { flex: none; width: 40px; height: 40px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; box-shadow: var(--shadow-sm); }
+        .td-title { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+        .td-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; font-weight: 500;}
+        .daily3-list { display: flex; flex-direction: column; gap: 8px; }
+        .daily3-item { background: var(--bg-color); padding: 12px 16px; border-radius: 12px; font-size: 14px; display: flex; align-items: center; gap: 10px;}
+        .daily3-item b { color: var(--secondary); flex: none; width: 70px;}
+        .daily3-item span { font-weight: bold; }
+        .daily3-item em { font-style: normal; font-size: 12px; color: var(--text-muted); margin-left: auto; text-align: right;}
+
+        /* Fixes */
+        .fix-list { display: flex; flex-direction: column; gap: 16px; }
+        .fix-card { background: var(--bg-color); padding: 16px; border-radius: 16px; }
+        .fix-q { font-weight: 800; font-size: 15px; margin-bottom: 8px; color: var(--text-main); }
+        .fix-a { font-size: 14px; color: var(--text-muted); line-height: 1.7; font-weight: 500;}
+
+        /* Data */
+        .btn-primary, .btn-secondary, .btn-danger {
+          width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 800; cursor: pointer; border: none; transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: var(--shadow-float); }
+        .btn-primary:active { transform: scale(0.96); background: var(--primary-hover); }
+        .btn-secondary { background: var(--bg-color); color: var(--primary); }
+        .btn-secondary:active { background: #FDE8E1; transform: scale(0.96); }
+        .btn-danger { background: transparent; color: var(--danger); border: 2px dashed var(--danger-light); }
+        .btn-danger:active { background: var(--danger-light); }
+        .toast-msg { text-align: center; margin-top: 16px; font-size: 13px; font-weight: bold; color: var(--secondary); background: var(--secondary-light); padding: 10px; border-radius: 8px; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.8; }
+
+        /* 底部导航 */
+        .tabs {
+          position: fixed; bottom: 0; left: 0; right: 0;
+          max-width: 500px; margin: 0 auto;
+          display: flex;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+          border-top: 1px solid var(--line);
+          padding-bottom: env(safe-area-inset-bottom, 16px);
+          z-index: 100;
+        }
+        .tab {
+          flex: 1; padding: 16px 0; border: none; background: none;
+          font-size: 13px; font-weight: 700; color: var(--text-muted);
+          cursor: pointer; transition: color 0.2s;
+        }
+        .tab.on { color: var(--primary); }
+        
+        /* 针对大屏稍微优化 */
+        @media (min-width: 500px) {
+          .app { box-shadow: var(--shadow-md); border-radius: 0 0 24px 24px; min-height: auto; margin-top: 20px;}
+          .tabs { border-radius: 0 0 24px 24px; position: absolute; }
+        }
+      `);
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App, null));
+  </script>
+</body>
+</html>
   var LIBS = [
     'react@18.3.1/umd/react.production.min.js',
     'react-dom@18.3.1/umd/react-dom.production.min.js',
