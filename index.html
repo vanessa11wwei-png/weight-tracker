@@ -1,191 +1,1514 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F2F4F0">
-<title>减脂打卡</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-body{background:#F2F4F0;padding:14px;color:#222;line-height:1.6;max-width:600px;margin:0 auto}
-.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-h1{text-align:center;margin:16px 0 20px;font-size:22px}
-h2{font-size:17px;margin-bottom:10px}
-.btn{padding:8px 14px;border-radius:12px;border:none;background:#e9efe3;color:#333;margin:4px;font-size:13px;cursor:pointer;font-family:inherit}
-.btn.active{background:#87a868;color:#fff}
-input,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:12px;margin:6px 0;font-size:15px;font-family:inherit}
-textarea{min-height:70px;resize:vertical}
-.row{display:flex;gap:10px;align-items:center;margin:8px 0}
-.row .label{flex:1}
-.row .label small{display:block;color:#888;font-size:12px}
-.row input{width:140px;margin:0}
-.cups{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.cups button{width:36px;height:36px;border:none;background:#e9efe3;border-radius:8px;cursor:pointer;font-size:18px}
-.cups button.on{background:#87a868}
-.chart-wrap{width:100%;height:240px;position:relative}
-canvas{width:100%;height:100%}
-.empty{text-align:center;padding:30px;color:#999;font-size:14px}
-.footer{text-align:center;margin:24px 0;color:#aaa;font-size:12px}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F2F4F0">
+  <title>减脂打卡完整版</title>
 </head>
 <body>
-<h1>🥗 减脂打卡</h1>
-
-<div class="card">
-  <h2>📅 <span id="today"></span></h2>
-  <div class="row">
-    <div class="label">晨起体重(kg)<small>初始64.0 → 目标59.0</small></div>
-    <input type="number" step="0.1" id="weight" placeholder="今日体重">
-  </div>
-  <div class="row">
-    <div class="label">晨起腰围(cm)<small>初始80 → 目标67</small></div>
-    <input type="number" step="0.5" id="waist" placeholder="今日腰围">
-  </div>
-</div>
-
-<div class="card">
-  <h2>💧 喝水（每杯250ml）</h2>
-  <div class="cups" id="cups"></div>
-  <div style="text-align:center;font-size:14px;color:#666">已喝 <span id="waterNum">0</span> ml / 目标 2000ml</div>
-</div>
-
-<div class="card"><h2>🍽️ 早餐</h2><div id="breakfast"></div></div>
-<div class="card"><h2>🍱 午餐</h2><div id="lunch"></div></div>
-<div class="card"><h2>🥗 晚餐</h2><div id="dinner"></div></div>
-<div class="card"><h2>🍎 加餐（可选）</h2><div id="snack"></div></div>
-<div class="card"><h2>🏃 运动</h2><div id="sport"></div></div>
-
-<div class="card">
-  <h2>📝 备注</h2>
-  <textarea id="note" placeholder="记录身体感受、睡眠、有没有暴食等"></textarea>
-</div>
-
-<div class="card">
-  <h2>📈 体重曲线</h2>
-  <div class="chart-wrap"><canvas id="chart"></canvas><div class="empty" id="chartEmpty">还没有体重记录</div></div>
-</div>
-
-<div class="footer">数据保存在浏览器本地，清缓存会丢失，建议偶尔截图备份</div>
-
+  <div id="root"></div>
+  
 <script>
-// ===== 数据 =====
-const MEALS = {
-  breakfast:["豆浆400ml+茶叶蛋2个+玉米半根","牛奶250+全麦面包2片+水煮蛋1","燕麦40g+牛奶250+香蕉半根","无糖酸奶200g+蓝莓+坚果10g","红薯150g+鸡蛋1个+无糖豆浆300ml"],
-  lunch:["一拳杂粮饭+两拳绿叶菜+一掌瘦肉","荞麦面60g+青菜+鸡蛋+虾仁8只","玉米1根+清蒸鱼120g+时蔬","紫薯180g+豆腐200g+凉拌黄瓜","杂粮饭半碗+番茄金针菇+鸡胸肉110g"],
-  dinner:["大量蔬菜+豆腐/鱼虾+无主食","菌菇蔬菜汤+鸡蛋1个+凉拌海带丝","虾仁100g+西兰花+小番茄","嫩豆腐250g煮汤+炒青菜+无主食","冬瓜海带汤+去皮鸡腿肉90g+无主食"],
-  snack:["小番茄15颗","黄瓜一根","蓝莓一小盒","无糖酸奶100g","小猕猴桃1个"],
-  sport:["快走45分钟","跳绳20分钟","帕梅拉30分钟","瑜伽40分钟","椭圆机35分钟","慢跑30分钟","无运动"]
+(function(){
+  var LIBS = [
+    'react@18.3.1/umd/react.production.min.js',
+    'react-dom@18.3.1/umd/react-dom.production.min.js',
+    'recharts@2.12.7/umd/Recharts.min.js'
+  ];
+  var CDNS = [
+    function(n){return 'https://cdn.jsdelivr.net/npm/'+n},
+    function(n){return 'https://unpkg.com/'+n},
+    function(n){return 'https://lib.baomitu.com/'+n.replace('@','/').replace('/umd/','/')}
+  ];
+  var idx = 0;
+  function loadLib(i, cdnIdx, cb){
+    if(i>=LIBS.length){cb();return}
+    if(cdnIdx>=CDNS.length){
+      document.getElementById('root').innerHTML='<div style="padding:40px;text-align:center;color:#c00">网络加载失败，请检查网络后刷新</div>';
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = CDNS[cdnIdx](LIBS[i]);
+    s.onload = function(){loadLib(i+1, 0, cb)};
+    s.onerror = function(){loadLib(i, cdnIdx+1, cb)};
+    document.head.appendChild(s);
+  }
+  window.__startApp = function(){
+
+const {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo
+} = React;
+const {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  ReferenceLine
+} = Recharts;
+
+/* ══════════════ 常量 ══════════════ */
+
+const START = "2026-09-03";
+const START_KG = 64.0;
+const GOAL_KG = 50.0;
+const OK_KG = 52.5; // 105斤，她说可以接受
+const START_WAIST = 80;
+const GOAL_WAIST = 67;
+const BREAKFAST = [["豆浆400ml + 茶叶蛋2个 + 玉米半根", 310, 1], ["牛奶250 + 全麦面包2片 + 水煮蛋1", 340], ["燕麦40g + 牛奶250 + 香蕉半根", 330], ["杂粮馒头1 + 鸡蛋1 + 无糖豆浆", 320], ["全麦面包2片 + 芝士1片 + 蛋1 + 圣女果", 340], ["小米粥 + 鹌鹑蛋5个 + 凉拌黄瓜", 280], ["便利店：牛奶 + 溏心蛋2 + 苹果", 330], ["家里做的饭", 350], ["其他 / 外食", 400], ["没吃", 0]];
+const LUNCH = [["杂粮饭半份 + 卤鸡腿去皮 + 炒空心菜", 500, 1], ["米饭半份 + 番茄炒蛋 + 清蒸龙利鱼 + 生菜", 480], ["米饭半份 + 肉丝 + 上汤娃娃菜", 500], ["牛肉汤面（面吃2/3）+ 多要青菜", 490], ["米饭半份 + 白切鸡 + 韭菜炒蛋", 510], ["麻辣烫（清汤微辣）", 470], ["轻食沙拉碗（酱汁只用一半）", 500], ["家里做的饭", 500], ["其他 / 外食", 650], ["聚餐 / 放开吃", 900, 0, "feast"], ["没吃", 0]];
+const SNACK = [["牛奶250ml + 圣女果一把", 150, 1], ["苹果1个 + 水煮蛋1个", 170], ["即食鸡胸肠 + 圣女果", 100], ["毛豆一把", 105], ["原味坚果15g", 90], ["85%黑巧2块 + 茶", 90], ["无糖酸奶100g", 90], ["其他", 150], ["没吃", 0]];
+const DINNER = [["番茄鸡蛋荞麦面（面一半）+ 空心菜", 430, 1], ["龙利鱼150 + 蒜蓉空心菜 + 半碗杂粮饭", 420], ["孜然烤鸡腿去皮 + 蒜蓉菠菜 + 玉米半根", 460], ["韭菜炒蛋 + 豆干炒四季豆 + 半碗饭", 450], ["虾仁 + 嫩豆腐 + 上海青 + 半碗饭", 430], ["卤牛肉100 + 蔬菜沙拉 + 全麦面包1片", 430], ["清汤麻辣烫（微辣）", 440], ["番茄牛肉汤 + 半碗饭 + 白灼包菜", 450], ["家里做的饭", 500], ["其他 / 外卖", 650], ["聚餐 / 放开吃", 900, 0, "feast"], ["没吃", 0]];
+const TEA = [["没喝", 0, "ok"], ["自制奶茶", 130, "ok"], ["外买无糖", 90, "ok"], ["外买正常糖", 450, "bad"]];
+const NIGHT = [["没吃", 0, "ok"], ["牛奶+鸡蛋", 200, "ok"], ["吃了", 700, "bad"]];
+const SPORT = ["没做", "休息日", "游泳 45分钟", "下肢+臀+核心", "背肩+核心（矫正溜肩）", "骑车 / 爬山 / 走路", "居家跟练 / 散步", "其他运动"];
+const MEALKEYS = {
+  b: ["早餐", BREAKFAST],
+  l: ["午餐", LUNCH],
+  s: ["加餐", SNACK],
+  d: ["晚餐", DINNER]
 };
+const PHASES = [{
+  until: 14,
+  name: "准备期",
+  note: "还在家，只做6条规则"
+}, {
+  until: 28,
+  name: "冲刺期",
+  note: "上班了，建立三餐节奏"
+}, {
+  until: 84,
+  name: "加速期",
+  note: "完整菜单 + 每周4练"
+}, {
+  until: 140,
+  name: "稳定期",
+  note: "每周约1斤"
+}, {
+  until: 168,
+  name: "收尾期",
+  note: "塑形为主"
+}, {
+  until: 99999,
+  name: "维持期",
+  note: "守住4条红线"
+}];
+const RULES1 = ["起床 400ml 温柠檬水，一口气喝完", "全天 2000ml 液体，什么茶都算", "奶茶改自制或无糖", "不吃半夜那顿", "走够 6000 步", "比昨天早睡 40 分钟"];
+const MILESTONES = [[28, 59.5, 76.5, "掉7–9斤，裤腰松"], [56, 58.0, 75, "衣服明显松"], [84, 56.0, 72, "沙漏感回来 · 去复查B超"], [140, 52.0, 68, "曲线明确"], [168, 50.0, 66, "目标达成"]];
+const TRAINING = [["周一", "游泳 45分钟", "蛙泳自由泳交替，游2分钟休30秒"], ["周二", "下肢+臀+核心", "深蹲4×12 · 臀桥4×15 · 箭步蹲3×每侧10 · 罗马尼亚硬拉3×12 · 腿弯举3×12 · 死虫3×每侧10 · 侧平板3×每侧20秒"], ["周三", "休息", "散步或彻底躺平"], ["周四", "背肩+核心", "高位下拉4×12 · 坐姿划船3×12 · 面拉4×15 · Y字举3×12 · 侧平举3×15 · 三头下压3×15 · 平板支撑3×40秒"], ["周五", "游泳 45分钟", "同周一"], ["周六", "自由活动", "骑车、爬山、逛街走路，当放松"], ["周日", "休息", ""]];
+const DAILY3 = [["真空腹", "早上空腹 3组×15秒", "收腰围，沙漏腰的关键"], ["靠墙抬腿", "睡前 10分钟", "消小腿水肿"], ["靠墙天使", "白天随时 2组×10", "矫正溜肩"]];
+const FIXES = [["体重不动", "看7天平均。连续14天不动才叫平台期。处理顺序：先加活动量 → 再查油和酱料 → 最后才减50大卡。不要一上来砍热量。"], ["一天涨1kg", "是水和食物重量。高盐外食后必涨，两天回落。"], ["经期那几天", "不看数据、不下结论、训练降强度。停滞或涨0.5–1kg都正常。"], ["暴食一顿", "当天照常吃完，第二天正常继续。绝不靠饿下一顿补偿，那是下一轮暴食的开关。"], ["暴食一周", "回到准备期那6条规则，只做规则不数热量，两周后重新入轨。"], ["无聊想吃", "设10分钟闹钟，去洗脸、下楼、洗澡。10分钟后还想吃，就吃备好的低卡零食。"], ["压力想吃", "冲动20–40分钟消退。做占手的事：洗澡、洗头、游泳、打游戏。"], ["半夜想吃", "治本是调作息，你半夜吃是因为还醒着。过渡期：热牛奶250 + 水煮蛋1个，比烧烤少1000大卡。外卖App挪到第三屏。"], ["朋友聚餐", "一周第1次随便吃，这就是自由餐。第2次先菜后饭、只喝茶、不点油炸和甜品。第3次起只吃菜和蛋白质。"], ["连吃4天以上", "切维持模式，只要求不涨：早餐不动 + 每天8000步 + 不喝含糖饮料。结束后直接回归，不做补偿性节食。"], ["加班很晚", "下午加餐必吃。回家喝牛奶配鸡蛋，或一小碗面，别硬扛。"], ["火锅烧烤局", "不推掉。当天早午餐各减100大卡，点清汤锅微辣，先涮菜后涮肉，蘸料用醋+生抽+蒜，不用麻酱。"]];
+const FOODS = [["最爱蔬菜", "空心菜 · 韭菜 · 番茄 · 海带 · 四季豆"], ["其他蔬菜", "生菜 · 菠菜 · 娃娃菜 · 上海青 · 大白菜 · 包菜 · 豆芽 · 黄瓜 · 香菜"], ["肉禽蛋", "鸡腿肉去皮 · 牛肉 · 猪里脊 · 鸭肉 · 鸡蛋 · 鹌鹑蛋 · 卤牛肉"], ["水产", "龙利鱼 · 巴沙鱼 · 带鱼 · 金枪鱼罐头 · 虾 · 花甲 · 三文鱼"], ["豆制品", "老豆腐 · 嫩豆腐 · 豆干 · 千张 · 腐竹 · 无糖豆浆 · 毛豆"], ["主食", "杂粮饭 · 白米饭 · 荞麦面 · 全麦面包 · 燕麦 · 玉米 · 土豆 · 藜麦 · 杂粮馒头"], ["水果", "苹果 · 梨 · 香蕉 · 蓝莓 · 草莓 · 圣女果 · 柚子 · 橙子 · 火龙果 · 木瓜 · 桃子"], ["调味", "蒜 · 姜 · 葱 · 醋 · 生抽 · 蚝油 · 蒸鱼豉油 · 花椒 · 孜然 · 咖喱 · 黑胡椒 · 柠檬（微辣）"]];
+const AVOID = "菇类 · 西兰花 · 胡萝卜 · 芹菜 · 苦瓜 · 茄子 · 洋葱 · 青椒 · 红薯 · 紫薯 · 芋头 · 茼蒿 · 西葫芦 · 秋葵 · 莴笋 · 油麦菜 · 苋菜 · 冬瓜 · 丝瓜 · 芦笋 · 白萝卜 · 莲藕 · 山药 · 南瓜 · 彩椒 · 西洋菜 · 芥兰 · 菜心 · 紫甘蓝 · 木耳 · 魔芋 · 米粉河粉 · 猕猴桃 · 黑咖啡 · 杏仁奶";
+const SHOPPING = [["空气炸锅 4–5L", "¥180", "主力：烤鸡腿、烤虾、烤玉米，不用油不用看火"], ["不粘炒锅 28cm", "¥60", "炒菜煎蛋"], ["1L冷泡瓶 + 茶包", "¥50", "解决喝水问题，睡前泡上放冰箱"], ["电子厨房秤", "¥25", "只用第一个月，建立分量感后可以停"], ["喷油壶", "¥15", "最有效的控油工具"], ["保鲜盒 3–4个", "¥40", "周末备餐用"], ["体重秤（带体脂）", "¥60", "每天早上称"], ["小电饭煲 1.5L", "¥90", "煮杂粮饭，可预约"], ["软尺", "¥5", "量围度"]];
+const PREP = ["电饭煲煮一锅杂粮饭，分装6份冷冻", "煮10个鸡蛋冷藏", "空气炸锅烤一盒鸡腿肉（去皮，孜然黑胡椒腌，200度20分钟），分3份", "洗切3天的青菜，沥干装盒冷藏", "3个1L水瓶塞茶包放冰箱"];
 
-// ===== 状态 =====
-const today = new Date().toISOString().slice(0,10);
-let data = JSON.parse(localStorage.getItem("fatlog")||"[]");
-let todayData = data.find(d=>d.date===today) || {date:today,weight:"",waist:"",water:0,breakfast:-1,lunch:-1,dinner:-1,snack:-1,sport:-1,note:""};
+/* ══════════════ 工具 ══════════════ */
 
-function save(){
-  data = data.filter(d=>d.date!==today);
-  data.push({...todayData});
-  localStorage.setItem("fatlog",JSON.stringify(data));
+const pad = n => String(n).padStart(2, "0");
+const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+const WD = ["日", "一", "二", "三", "四", "五", "六"];
+const dayIdx = k => Math.round((parse(k) - parse(START)) / 86400000);
+const short = k => k.slice(5).replace("-", "/");
+const empty = () => ({
+  w: "",
+  poop: null,
+  period: false,
+  water: 0,
+  b: null,
+  l: null,
+  s: null,
+  d: null,
+  tea: null,
+  night: null,
+  sport: null,
+  steps: "",
+  sleep: "",
+  vac: false,
+  legs: false,
+  angel: false,
+  note: ""
+});
+const phaseOf = k => PHASES.find(p => dayIdx(k) < p.until) || PHASES[PHASES.length - 1];
+function mondayOf(d) {
+  const x = new Date(d);
+  x.setDate(x.getDate() - (x.getDay() + 6) % 7);
+  return x;
+}
+function listFor(mk, custom) {
+  const base = MEALKEYS[mk][1];
+  return base.concat((custom[mk] || []).map(c => [c[0], c[1], 0, "custom"]));
+}
+function kcal(rec, custom) {
+  if (!rec) return null;
+  const g = (mk, i) => i == null ? null : (listFor(mk, custom)[i] || [null, 0])[1];
+  const p = [g("b", rec.b), g("l", rec.l), g("s", rec.s), g("d", rec.d), rec.tea == null ? null : TEA[rec.tea][1], rec.night == null ? null : NIGHT[rec.night][1]];
+  return p.every(x => x == null) ? null : p.reduce((a, b) => a + (b || 0), 0);
+}
+function touched(r) {
+  return !!(r && (r.w || r.poop != null || r.water || r.b != null || r.l != null || r.s != null || r.d != null || r.tea != null || r.night != null || r.sport != null || r.steps || r.note || r.period));
+}
+function score(r) {
+  if (!touched(r)) return null;
+  let s = 0;
+  if (r.water >= 8) s++;
+  if (r.night != null && NIGHT[r.night][2] === "ok") s++;
+  if (r.tea != null && TEA[r.tea][2] === "ok") s++;
+  if (r.sport != null && r.sport >= 2) s++;
+  if (Number(r.steps) >= 6000) s++;
+  return s;
+}
+function isFeast(r, custom) {
+  const f = (mk, i) => i != null && (listFor(mk, custom)[i] || [])[3] === "feast";
+  return f("l", r.l) || f("d", r.d);
+}
+function bedTarget(k) {
+  const i = dayIdx(k);
+  if (i < 0 || i > 8) return null;
+  const mins = 4 * 60 + 40 - i * 40; // 从 04:40 每天提前40分钟
+  const m = (mins % 1440 + 1440) % 1440;
+  return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 }
 
-// ===== 渲染日期 =====
-document.getElementById("today").textContent = today;
+/* ══════════════ 通用组件 ══════════════ */
 
-// ===== 体重腰围 =====
-const wInput = document.getElementById("weight");
-const waistInput = document.getElementById("waist");
-wInput.value = todayData.weight;
-waistInput.value = todayData.waist;
-wInput.oninput = e=>{todayData.weight=e.target.value;save();drawChart()};
-waistInput.oninput = e=>{todayData.waist=e.target.value;save()};
-
-// ===== 水杯 =====
-const cupsEl = document.getElementById("cups");
-function renderCups(){
-  cupsEl.innerHTML = "";
-  for(let i=1;i<=8;i++){
-    const b = document.createElement("button");
-    b.textContent = "💧";
-    b.className = todayData.water>=i ? "on" : "";
-    b.onclick = ()=>{todayData.water = todayData.water===i?0:i;save();renderCups()};
-    cupsEl.appendChild(b);
-  }
-  document.getElementById("waterNum").textContent = todayData.water*250;
+const Cups = ({
+  n,
+  onSet
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "cups"
+}, Array.from({
+  length: 8
+}).map((_, i) => /*#__PURE__*/React.createElement("button", {
+  key: i,
+  className: "cup" + (i < n ? " on" : ""),
+  onClick: () => onSet(i + 1 === n ? i : i + 1),
+  "aria-label": `第${i + 1}杯 250毫升`
+}, /*#__PURE__*/React.createElement("svg", {
+  viewBox: "0 0 24 30",
+  width: "100%",
+  height: "100%"
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M4 4 h16 l-2 22 a2 2 0 0 1 -2 2 h-8 a2 2 0 0 1 -2 -2 z",
+  className: "cup-body"
+}), i < n && /*#__PURE__*/React.createElement("path", {
+  d: "M5.2 9 h13.6 l-1.5 17 a2 2 0 0 1 -2 2 h-6.6 a2 2 0 0 1 -2 -2 z",
+  className: "cup-fill"
+})))));
+const Seg = ({
+  options,
+  value,
+  onChange
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "seg"
+}, options.map((o, i) => /*#__PURE__*/React.createElement("button", {
+  key: i,
+  className: "seg-btn" + (value === i ? " on" : "") + (o[2] === "bad" && value === i ? " warn" : ""),
+  onClick: () => onChange(value === i ? null : i)
+}, o[0])));
+const Row = ({
+  time,
+  label,
+  hint,
+  children
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "row"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "rail"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "time"
+}, time)), /*#__PURE__*/React.createElement("div", {
+  className: "rbody"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "rlabel"
+}, label, hint && /*#__PURE__*/React.createElement("span", {
+  className: "hint"
+}, hint)), children));
+function MealPicker({
+  mk,
+  rec,
+  custom,
+  upd,
+  addCustom
+}) {
+  const [adding, setAdding] = useState(false);
+  const [nm, setNm] = useState("");
+  const [kc, setKc] = useState("");
+  const list = listFor(mk, custom);
+  const v = rec[mk];
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("select", {
+    className: "picker",
+    value: v == null ? "" : v,
+    onChange: e => upd({
+      [mk]: e.target.value === "" ? null : Number(e.target.value)
+    })
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "选一个"), list.map((o, i) => /*#__PURE__*/React.createElement("option", {
+    key: i,
+    value: i
+  }, o[2] ? `★ ${o[0]}` : o[0], o[3] === "custom" ? "（我的）" : ""))), !adding ? /*#__PURE__*/React.createElement("button", {
+    className: "tiny",
+    onClick: () => setAdding(true)
+  }, "＋ 加一个自己常吃的") : /*#__PURE__*/React.createElement("div", {
+    className: "addbox"
+  }, /*#__PURE__*/React.createElement("input", {
+    placeholder: "菜名",
+    value: nm,
+    onChange: e => setNm(e.target.value)
+  }), /*#__PURE__*/React.createElement("input", {
+    placeholder: "大卡",
+    inputMode: "numeric",
+    value: kc,
+    onChange: e => setKc(e.target.value)
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (nm && kc) {
+        addCustom(mk, nm, Number(kc));
+        setNm("");
+        setKc("");
+        setAdding(false);
+      }
+    }
+  }, "存"), /*#__PURE__*/React.createElement("button", {
+    className: "ghost",
+    onClick: () => setAdding(false)
+  }, "取消")));
 }
-renderCups();
 
-// ===== 餐食按钮 =====
-function renderMeal(key){
-  const el = document.getElementById(key);
-  el.innerHTML = "";
-  MEALS[key].forEach((name,idx)=>{
-    const b = document.createElement("button");
-    b.className = "btn"+(todayData[key]===idx?" active":"");
-    b.textContent = name;
-    b.onclick = ()=>{todayData[key] = todayData[key]===idx?-1:idx;save();renderMeal(key)};
-    el.appendChild(b);
+/* ══════════════ 主组件 ══════════════ */
+
+function App() {
+  const [tab, setTab] = useState("today");
+  const [core, setCore] = useState({
+    days: {},
+    measures: [],
+    weekly: {},
+    custom: {}
   });
+  const [cur, setCur] = useState(() => key(new Date()));
+  const [ready, setReady] = useState(false);
+  const [err, setErr] = useState("");
+  const timer = useRef(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = localStorage.getItem("fatloss-core");
+        if (raw) {
+          const p = JSON.parse(raw);
+          setCore({
+            days: p.days || {},
+            measures: p.measures || [],
+            weekly: p.weekly || {},
+            custom: p.custom || {}
+          });
+        }
+      } catch (e) {/* 第一次用，还没有记录 */}
+      setReady(true);
+    })();
+  }, []);
+  const save = useCallback(next => {
+    setCore(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      try {
+        localStorage.setItem("fatloss-core", JSON.stringify(next));
+        setErr("");
+      } catch (e) {
+        setErr("这次没存上：浏览器本地存储不可用或空间不足");
+      }
+    }, 400);
+  }, []);
+  const {
+    days,
+    measures,
+    weekly,
+    custom
+  } = core;
+  const rec = days[cur] || empty();
+  const upd = patch => save({
+    ...core,
+    days: {
+      ...days,
+      [cur]: {
+        ...rec,
+        ...patch
+      }
+    }
+  });
+  const addCustom = (mk, name, k) => save({
+    ...core,
+    custom: {
+      ...custom,
+      [mk]: [...(custom[mk] || []), [name, k]]
+    }
+  });
+  const logged = useMemo(() => Object.entries(days).filter(([, v]) => v.w !== "" && v.w != null).map(([k, v]) => ({
+    k,
+    w: Number(v.w),
+    period: v.period
+  })).sort((a, b) => a.k < b.k ? -1 : 1), [days]);
+  const avgOf = arr => arr.length ? arr.reduce((a, b) => a + b.w, 0) / arr.length : null;
+  const avg7 = avgOf(logged.slice(-7));
+  const avg7prev = avgOf(logged.slice(-14, -7));
+  const last = logged.length ? logged[logged.length - 1].w : null;
+  const plateau = avg7 != null && avg7prev != null && Math.abs(avg7 - avg7prev) < 0.15 && logged.length >= 14;
+  const streaks = useMemo(() => {
+    const ks = Object.keys(days).sort().reverse();
+    let noNight = 0,
+      water = 0,
+      ok = true,
+      ok2 = true;
+    for (const k of ks) {
+      const r = days[k];
+      if (!touched(r)) continue;
+      if (ok && r.night != null && NIGHT[r.night][2] === "ok") noNight++;else ok = false;
+      if (ok2 && r.water >= 8) water++;else ok2 = false;
+      if (!ok && !ok2) break;
+    }
+    return {
+      noNight,
+      water
+    };
+  }, [days]);
+  if (!ready) return /*#__PURE__*/React.createElement("div", {
+    className: "app"
+  }, /*#__PURE__*/React.createElement(Style, null), /*#__PURE__*/React.createElement("div", {
+    className: "loading"
+  }, "正在打开你的记录…"));
+  const TABS = [["today", "今天"], ["log", "记录"], ["trend", "趋势"], ["body", "身体"], ["plan", "计划"]];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "app"
+  }, /*#__PURE__*/React.createElement(Style, null), tab === "today" && /*#__PURE__*/React.createElement(Today, {
+    cur,
+    setCur,
+    rec,
+    upd,
+    custom,
+    addCustom,
+    err,
+    streaks
+  }), tab === "log" && /*#__PURE__*/React.createElement(Log, {
+    days,
+    custom,
+    setCur,
+    setTab
+  }), tab === "trend" && /*#__PURE__*/React.createElement(Trend, {
+    days,
+    logged,
+    avg7,
+    avg7prev,
+    last,
+    plateau,
+    custom,
+    weekly,
+    core,
+    save,
+    streaks
+  }), tab === "body" && /*#__PURE__*/React.createElement(Body, {
+    measures,
+    core,
+    save,
+    avg7
+  }), tab === "plan" && /*#__PURE__*/React.createElement(Plan, {
+    core,
+    save
+  }), /*#__PURE__*/React.createElement("nav", {
+    className: "tabs"
+  }, TABS.map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    className: "tab" + (tab === k ? " on" : ""),
+    onClick: () => setTab(k)
+  }, l))));
 }
-["breakfast","lunch","dinner","snack","sport"].forEach(renderMeal);
 
-// ===== 备注 =====
-const noteEl = document.getElementById("note");
-noteEl.value = todayData.note;
-noteEl.oninput = e=>{todayData.note=e.target.value;save()};
+/* ══════════════ 今天 ══════════════ */
 
-// ===== 体重曲线（Canvas） =====
-function drawChart(){
-  const canvas = document.getElementById("chart");
-  const empty = document.getElementById("chartEmpty");
-  const records = data.filter(d=>d.weight).sort((a,b)=>a.date.localeCompare(b.date));
-  if(records.length<1){empty.style.display="block";canvas.style.display="none";return}
-  empty.style.display="none";canvas.style.display="block";
-  const dpr = window.devicePixelRatio||1;
-  const w = canvas.offsetWidth, h = canvas.offsetHeight;
-  canvas.width = w*dpr; canvas.height = h*dpr;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(dpr,dpr);
-  const pad = {l:36,r:16,t:16,b:28};
-  const cw = w-pad.l-pad.r, ch = h-pad.t-pad.b;
-  const weights = records.map(r=>parseFloat(r.weight));
-  const minW = Math.min(...weights,59)-1, maxW = Math.max(...weights,64)+1;
-  // 网格
-  ctx.strokeStyle="#eee";ctx.lineWidth=1;ctx.fillStyle="#999";ctx.font="11px sans-serif";
-  for(let i=0;i<=4;i++){
-    const y = pad.t + ch*i/4;
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
-    const val = (maxW - (maxW-minW)*i/4).toFixed(1);
-    ctx.fillText(val,4,y+4);
-  }
-  // 目标线
-  const goalY = pad.t + ch*(maxW-59)/(maxW-minW);
-  ctx.strokeStyle="#87a868";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,goalY);ctx.lineTo(w-pad.r,goalY);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle="#87a868";ctx.fillText("目标59",w-pad.r-36,goalY-4);
-  // 折线
-  ctx.strokeStyle="#447220";ctx.lineWidth=2;ctx.beginPath();
-  records.forEach((r,i)=>{
-    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
-    const y = pad.t + ch*(maxW-parseFloat(r.weight))/(maxW-minW);
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  });
-  ctx.stroke();
-  // 点
-  ctx.fillStyle="#447220";
-  records.forEach((r,i)=>{
-    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
-    const y = pad.t + ch*(maxW-parseFloat(r.weight))/(maxW-minW);
-    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
-  });
-  // X轴日期
-  ctx.fillStyle="#999";
-  records.forEach((r,i)=>{
-    if(records.length>6 && i%Math.ceil(records.length/6)!==0 && i!==records.length-1) return;
-    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
-    ctx.fillText(r.date.slice(5),x-14,h-8);
-  });
+function Today({
+  cur,
+  setCur,
+  rec,
+  upd,
+  custom,
+  addCustom,
+  err,
+  streaks
+}) {
+  const dt = parse(cur);
+  const isToday = cur === key(new Date());
+  const i = dayIdx(cur);
+  const ph = phaseOf(cur);
+  const cal = kcal(rec, custom);
+  const sc = score(rec);
+  const bt = bedTarget(cur);
+  const shift = n => {
+    const d = parse(cur);
+    d.setDate(d.getDate() + n);
+    setCur(key(d));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "head"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "nav",
+    onClick: () => shift(-1)
+  }, "‹"), /*#__PURE__*/React.createElement("div", {
+    className: "headmid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "date"
+  }, dt.getMonth() + 1, "月", dt.getDate(), "日 ", /*#__PURE__*/React.createElement("span", {
+    className: "wd"
+  }, "周", WD[dt.getDay()])), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "第 ", Math.max(1, Math.floor(i / 7) + 1), " 周 · ", ph.name, " · ", ph.note)), /*#__PURE__*/React.createElement("button", {
+    className: "nav",
+    onClick: () => shift(1),
+    disabled: isToday
+  }, "›")), !isToday && /*#__PURE__*/React.createElement("button", {
+    className: "backtoday",
+    onClick: () => setCur(key(new Date()))
+  }, "回到今天"), (streaks.noNight >= 3 || streaks.water >= 3) && /*#__PURE__*/React.createElement("div", {
+    className: "streak"
+  }, streaks.noNight >= 3 && /*#__PURE__*/React.createElement("span", null, "连续 ", /*#__PURE__*/React.createElement("b", null, streaks.noNight), " 天没吃夜宵"), streaks.water >= 3 && /*#__PURE__*/React.createElement("span", null, "连续 ", /*#__PURE__*/React.createElement("b", null, streaks.water), " 天喝够")), /*#__PURE__*/React.createElement(Row, {
+    time: "07:30",
+    label: "晨起体重",
+    hint: "上完厕所、空腹、同样衣服"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wrow"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "wnum",
+    type: "number",
+    step: "0.1",
+    inputMode: "decimal",
+    placeholder: "64.0",
+    value: rec.w,
+    onChange: e => upd({
+      w: e.target.value
+    })
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "unit"
+  }, "kg"), rec.w ? /*#__PURE__*/React.createElement("span", {
+    className: "jin"
+  }, (Number(rec.w) * 2).toFixed(1), " 斤") : null), /*#__PURE__*/React.createElement("div", {
+    className: "toggles"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tlabel"
+  }, "排便"), /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.poop === true ? " on" : ""),
+    onClick: () => upd({
+      poop: rec.poop === true ? null : true
+    })
+  }, "有"), /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.poop === false ? " on warn" : ""),
+    onClick: () => upd({
+      poop: rec.poop === false ? null : false
+    })
+  }, "没有"), /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.period ? " on period" : ""),
+    onClick: () => upd({
+      period: !rec.period
+    })
+  }, "经期")), rec.period && /*#__PURE__*/React.createElement("p", {
+    className: "inline-note"
+  }, "经期这几天不看数据、不下结论。停滞或涨0.5–1kg都正常，训练降强度就好。")), /*#__PURE__*/React.createElement(Row, {
+    time: "全天",
+    label: "喝了多少",
+    hint: "一杯 250ml，目标 8 杯"
+  }, /*#__PURE__*/React.createElement(Cups, {
+    n: rec.water,
+    onSet: n => upd({
+      water: n
+    })
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "waterline"
+  }, /*#__PURE__*/React.createElement("strong", null, rec.water * 250), " ml", /*#__PURE__*/React.createElement("span", {
+    className: "tip"
+  }, "茶、柠檬水、自制奶茶、牛奶、豆浆都算。第一杯是起床那杯温柠檬水，一口气喝完。"))), Object.entries(MEALKEYS).map(([mk, [label]]) => /*#__PURE__*/React.createElement(Row, {
+    key: mk,
+    time: {
+      b: "08:00",
+      l: "12:00",
+      s: "15:00",
+      d: "18:30"
+    }[mk],
+    label: label,
+    hint: mk === "s" ? "别省，省了晚上会失控" : undefined
+  }, /*#__PURE__*/React.createElement(MealPicker, {
+    mk: mk,
+    rec: rec,
+    custom: custom,
+    upd: upd,
+    addCustom: addCustom
+  }))), /*#__PURE__*/React.createElement(Row, {
+    time: "随时",
+    label: "奶茶"
+  }, /*#__PURE__*/React.createElement(Seg, {
+    options: TEA,
+    value: rec.tea,
+    onChange: v => upd({
+      tea: v
+    })
+  }), rec.tea === 3 && /*#__PURE__*/React.createElement("p", {
+    className: "inline-note"
+  }, "这杯450大卡，占了今天的三分之一。下次试试无糖去小料，或者回家泡自制的。")), /*#__PURE__*/React.createElement(Row, {
+    time: "20:00",
+    label: "运动"
+  }, /*#__PURE__*/React.createElement("select", {
+    className: "picker",
+    value: rec.sport == null ? "" : rec.sport,
+    onChange: e => upd({
+      sport: e.target.value === "" ? null : Number(e.target.value)
+    })
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "选一个"), SPORT.map((s, j) => /*#__PURE__*/React.createElement("option", {
+    key: j,
+    value: j
+  }, s))), /*#__PURE__*/React.createElement("div", {
+    className: "wrow mt"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "wnum sm",
+    type: "number",
+    inputMode: "numeric",
+    placeholder: "步数",
+    value: rec.steps,
+    onChange: e => upd({
+      steps: e.target.value
+    })
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "unit"
+  }, "步"))), /*#__PURE__*/React.createElement(Row, {
+    time: "22:30",
+    label: "睡前"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "toggles wrap"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.vac ? " on" : ""),
+    onClick: () => upd({
+      vac: !rec.vac
+    })
+  }, "真空腹 3×15秒"), /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.legs ? " on" : ""),
+    onClick: () => upd({
+      legs: !rec.legs
+    })
+  }, "靠墙抬腿 10分钟"), /*#__PURE__*/React.createElement("button", {
+    className: "pill" + (rec.angel ? " on" : ""),
+    onClick: () => upd({
+      angel: !rec.angel
+    })
+  }, "靠墙天使 2×10")), /*#__PURE__*/React.createElement("div", {
+    className: "wrow mt"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tlabel"
+  }, "夜宵")), /*#__PURE__*/React.createElement(Seg, {
+    options: NIGHT,
+    value: rec.night,
+    onChange: v => upd({
+      night: v
+    })
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "wrow mt"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tlabel"
+  }, "入睡"), /*#__PURE__*/React.createElement("input", {
+    className: "wnum sm",
+    type: "time",
+    value: rec.sleep,
+    onChange: e => upd({
+      sleep: e.target.value
+    })
+  })), bt && /*#__PURE__*/React.createElement("p", {
+    className: "inline-note"
+  }, "今天的目标是 ", bt, " 前睡。每天比昨天早40分钟，第7天就能到12点。")), /*#__PURE__*/React.createElement(Row, {
+    time: "备注",
+    label: "今天有什么特别的"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "note",
+    placeholder: "加班 / 聚餐 / 心情 / 身体状况",
+    value: rec.note,
+    onChange: e => upd({
+      note: e.target.value
+    })
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "tally"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tcell"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tnum"
+  }, cal == null ? "—" : cal), /*#__PURE__*/React.createElement("span", {
+    className: "tlab"
+  }, "今日热量")), /*#__PURE__*/React.createElement("div", {
+    className: "tcell"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tnum"
+  }, sc == null ? "—" : `${sc}/5`), /*#__PURE__*/React.createElement("span", {
+    className: "tlab"
+  }, "达标分"))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "达标分：喝够8杯 · 没吃夜宵 · 奶茶不是正常糖 · 有运动 · 步数≥6000。不用天天满分，一周有5天到4分就够了。"), err && /*#__PURE__*/React.createElement("p", {
+    className: "err"
+  }, err), dayIdx(cur) < 14 && /*#__PURE__*/React.createElement("div", {
+    className: "rulebox"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "h4"
+  }, "这两周只做这6条"), /*#__PURE__*/React.createElement("ol", {
+    className: "ol"
+  }, RULES1.map((r, j) => /*#__PURE__*/React.createElement("li", {
+    key: j
+  }, r))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "三餐按家里的吃就行，选「家里做的饭」。吃饭顺序：先菜、再肉蛋、最后主食。红烧油炸的菜用温水涮一下。")));
 }
-drawChart();
-window.addEventListener("resize",drawChart);
+
+/* ══════════════ 记录 ══════════════ */
+
+function Log({
+  days,
+  custom,
+  setCur,
+  setTab
+}) {
+  const [filter, setFilter] = useState("all");
+  const list = Object.entries(days).filter(([, v]) => touched(v)).sort((a, b) => a[0] < b[0] ? 1 : -1);
+  const shown = list.filter(([, v]) => {
+    if (filter === "bad") return v.night != null && NIGHT[v.night][2] === "bad" || v.tea === 3 || isFeast(v, custom);
+    if (filter === "note") return !!v.note;
+    if (filter === "period") return v.period;
+    return true;
+  });
+  const jump = k => {
+    setCur(k);
+    setTab("today");
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "head simple"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "headmid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "date"
+  }, "记录"), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "共 ", list.length, " 天 · 点一行可以回去改"))), /*#__PURE__*/React.createElement("div", {
+    className: "filters"
+  }, [["all", "全部"], ["bad", "破戒的"], ["note", "有备注"], ["period", "经期"]].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
+    key: k,
+    className: "fbtn" + (filter === k ? " on" : ""),
+    onClick: () => setFilter(k)
+  }, l))), shown.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "empty"
+  }, "这里还是空的。去「今天」记第一天，哪怕只填个体重。"), shown.map(([k, v]) => {
+    const sc = score(v),
+      c = kcal(v, custom);
+    const flags = [];
+    if (v.night != null && NIGHT[v.night][2] === "bad") flags.push("夜宵");
+    if (v.tea === 3) flags.push("正常糖");
+    if (isFeast(v, custom)) flags.push("聚餐");
+    if (v.period) flags.push("经期");
+    return /*#__PURE__*/React.createElement("button", {
+      className: "lrow",
+      key: k,
+      onClick: () => jump(k)
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "ldate"
+    }, short(k), /*#__PURE__*/React.createElement("em", null, "周", WD[parse(k).getDay()])), /*#__PURE__*/React.createElement("span", {
+      className: "lw"
+    }, v.w ? (Number(v.w) * 2).toFixed(1) : "—", /*#__PURE__*/React.createElement("em", null, "斤")), /*#__PURE__*/React.createElement("span", {
+      className: "ldots"
+    }, sc == null ? "—" : Array.from({
+      length: 5
+    }).map((_, j) => /*#__PURE__*/React.createElement("i", {
+      key: j,
+      className: "dot" + (j < sc ? " on" : "")
+    }))), /*#__PURE__*/React.createElement("span", {
+      className: "lc"
+    }, c ?? "—"), /*#__PURE__*/React.createElement("span", {
+      className: "lflags"
+    }, flags.map(f => /*#__PURE__*/React.createElement("em", {
+      key: f,
+      className: f === "经期" ? "fp" : "fb"
+    }, f)), v.note && /*#__PURE__*/React.createElement("em", {
+      className: "fn"
+    }, v.note)));
+  }));
+}
+
+/* ══════════════ 趋势 ══════════════ */
+
+function Trend({
+  days,
+  logged,
+  avg7,
+  avg7prev,
+  last,
+  plateau,
+  custom,
+  weekly,
+  core,
+  save,
+  streaks
+}) {
+  const chart = logged.slice(-90).map((p, i, arr) => {
+    const win = arr.slice(Math.max(0, i - 6), i + 1);
+    return {
+      d: short(p.k),
+      w: +(p.w * 2).toFixed(1),
+      a: +(win.reduce((s, x) => s + x.w, 0) / win.length * 2).toFixed(1)
+    };
+  });
+  const weeks = useMemo(() => {
+    const map = {};
+    Object.entries(days).filter(([, v]) => touched(v)).forEach(([k, v]) => {
+      const m = key(mondayOf(parse(k)));
+      (map[m] = map[m] || []).push(v);
+    });
+    return Object.entries(map).sort((a, b) => a[0] < b[0] ? 1 : -1).map(([m, l]) => {
+      const ws = l.map(v => Number(v.w)).filter(n => n > 0);
+      const cs = l.map(v => kcal(v, custom)).filter(n => n != null);
+      const ss = l.map(score).filter(n => n != null);
+      return {
+        m,
+        label: `${short(m)} 那周`,
+        n: l.length,
+        avg: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length * 2 : null,
+        cal: cs.length ? cs.reduce((a, b) => a + b, 0) / cs.length : null,
+        sc: ss.length ? ss.reduce((a, b) => a + b, 0) / ss.length : null,
+        poop: l.filter(v => v.poop === true).length,
+        water: l.filter(v => v.water >= 8).length,
+        sport: l.filter(v => v.sport != null && v.sport >= 2).length,
+        night: l.filter(v => v.night != null && NIGHT[v.night][2] === "bad").length,
+        sugar: l.filter(v => v.tea === 3).length,
+        feast: l.filter(v => isFeast(v, custom)).length
+      };
+    });
+  }, [days, custom]);
+  const setRefl = (m, field, val) => save({
+    ...core,
+    weekly: {
+      ...weekly,
+      [m]: {
+        ...(weekly[m] || {}),
+        [field]: val
+      }
+    }
+  });
+  const doneKg = avg7 != null ? START_KG - avg7 : 0;
+  const pct = Math.min(100, Math.max(0, doneKg / (START_KG - GOAL_KG) * 100));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "head simple"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "headmid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "date"
+  }, "趋势"), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "每天称，但只看7天平均"))), /*#__PURE__*/React.createElement("div", {
+    className: "bignums"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "bn"
+  }, last ? (last * 2).toFixed(1) : "—"), /*#__PURE__*/React.createElement("span", {
+    className: "bl"
+  }, "最近一次（斤）")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "bn accent"
+  }, avg7 ? (avg7 * 2).toFixed(1) : "—"), /*#__PURE__*/React.createElement("span", {
+    className: "bl"
+  }, "7天平均（斤）")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "bn"
+  }, avg7 ? (doneKg * 2).toFixed(1) : "—"), /*#__PURE__*/React.createElement("span", {
+    className: "bl"
+  }, "累计减重（斤）"))), /*#__PURE__*/React.createElement("div", {
+    className: "prog"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "progbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "progfill",
+    style: {
+      width: `${pct}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "proglab"
+  }, /*#__PURE__*/React.createElement("span", null, "128斤"), /*#__PURE__*/React.createElement("span", null, avg7 ? `还差 ${((avg7 - GOAL_KG) * 2).toFixed(1)} 斤` : "还没数据"), /*#__PURE__*/React.createElement("span", null, "100斤"))), chart.length > 1 ? /*#__PURE__*/React.createElement("div", {
+    className: "chart"
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 210
+  }, /*#__PURE__*/React.createElement(LineChart, {
+    data: chart,
+    margin: {
+      top: 8,
+      right: 8,
+      left: -18,
+      bottom: 0
+    }
+  }, /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "d",
+    tick: {
+      fontSize: 10,
+      fill: "#7f8b83"
+    },
+    tickLine: false,
+    axisLine: false,
+    minTickGap: 26
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    domain: ["dataMin - 2", "dataMax + 2"],
+    tick: {
+      fontSize: 10,
+      fill: "#7f8b83"
+    },
+    tickLine: false,
+    axisLine: false,
+    width: 40
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    contentStyle: {
+      fontSize: 12,
+      borderRadius: 8,
+      border: "1px solid #d9e0d9"
+    }
+  }), /*#__PURE__*/React.createElement(ReferenceLine, {
+    y: OK_KG * 2,
+    stroke: "#a9c4b2",
+    strokeDasharray: "3 3"
+  }), /*#__PURE__*/React.createElement(ReferenceLine, {
+    y: GOAL_KG * 2,
+    stroke: "#b5654a",
+    strokeDasharray: "4 4"
+  }), /*#__PURE__*/React.createElement(Line, {
+    type: "monotone",
+    dataKey: "w",
+    name: "每日",
+    stroke: "#c3ccc4",
+    strokeWidth: 1.5,
+    dot: false
+  }), /*#__PURE__*/React.createElement(Line, {
+    type: "monotone",
+    dataKey: "a",
+    name: "7天平均",
+    stroke: "#2f6b52",
+    strokeWidth: 2.5,
+    dot: false
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "深绿线是7天平均，这是你该看的。浅线是每日数字，波动全是水和食物重量。下面那条浅虚线是105斤，红虚线是100斤。")) : /*#__PURE__*/React.createElement("p", {
+    className: "empty"
+  }, "记满两天体重，这里就会出现曲线。"), plateau && /*#__PURE__*/React.createElement("div", {
+    className: "alert"
+  }, /*#__PURE__*/React.createElement("b", null, "连续两周平均值没动，这才叫平台期"), /*#__PURE__*/React.createElement("p", null, "处理顺序：先加活动量（多游一次泳，或每天多走3000步）→ 再检查油和酱料是不是超了 → 最后才考虑减50大卡。不要一上来就砍热量。")), /*#__PURE__*/React.createElement("h3", {
+    className: "h3"
+  }, "每周复盘"), weeks.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "empty"
+  }, "还没有记录。"), weeks.map((w, i) => {
+    const prev = weeks[i + 1];
+    const diff = w.avg && prev && prev.avg ? w.avg - prev.avg : null;
+    const r = weekly[w.m] || {};
+    return /*#__PURE__*/React.createElement("div", {
+      className: "wcard",
+      key: w.m
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "wtop"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "wlab"
+    }, w.label, /*#__PURE__*/React.createElement("em", null, w.n, "天")), /*#__PURE__*/React.createElement("span", {
+      className: "wavg"
+    }, w.avg ? w.avg.toFixed(1) + " 斤" : "—", diff != null && /*#__PURE__*/React.createElement("em", {
+      className: diff <= 0 ? "down" : "up"
+    }, diff > 0 ? "+" : "", diff.toFixed(1)))), /*#__PURE__*/React.createElement("div", {
+      className: "wgrid"
+    }, /*#__PURE__*/React.createElement("span", null, "排便 ", /*#__PURE__*/React.createElement("b", null, w.poop), "/", w.n), /*#__PURE__*/React.createElement("span", null, "喝够 ", /*#__PURE__*/React.createElement("b", null, w.water), "/", w.n), /*#__PURE__*/React.createElement("span", null, "运动 ", /*#__PURE__*/React.createElement("b", null, w.sport), " 次"), /*#__PURE__*/React.createElement("span", null, "夜宵 ", /*#__PURE__*/React.createElement("b", {
+      className: w.night ? "bad" : ""
+    }, w.night), " 次"), /*#__PURE__*/React.createElement("span", null, "正常糖 ", /*#__PURE__*/React.createElement("b", {
+      className: w.sugar ? "bad" : ""
+    }, w.sugar), " 杯"), /*#__PURE__*/React.createElement("span", null, "聚餐 ", /*#__PURE__*/React.createElement("b", {
+      className: w.feast > 1 ? "bad" : ""
+    }, w.feast), " 次"), /*#__PURE__*/React.createElement("span", null, "日均 ", /*#__PURE__*/React.createElement("b", null, w.cal ? Math.round(w.cal) : "—"), " 大卡"), /*#__PURE__*/React.createElement("span", null, "达标 ", /*#__PURE__*/React.createElement("b", null, w.sc ? w.sc.toFixed(1) : "—"), "/5")), w.feast > 1 && /*#__PURE__*/React.createElement("p", {
+      className: "inline-note"
+    }, "这周第2次以后的聚餐：先吃菜和肉、最后吃主食，饮料只喝茶，不点油炸和甜品。照样去，别推掉。"), /*#__PURE__*/React.createElement("div", {
+      className: "refl"
+    }, /*#__PURE__*/React.createElement("input", {
+      placeholder: "这周最难坚持的一条是…",
+      value: r.hard || "",
+      onChange: e => setRefl(w.m, "hard", e.target.value)
+    }), /*#__PURE__*/React.createElement("input", {
+      placeholder: "下周怎么调整…",
+      value: r.next || "",
+      onChange: e => setRefl(w.m, "next", e.target.value)
+    })));
+  }));
+}
+
+/* ══════════════ 身体 ══════════════ */
+
+const FIELDS = [["waist", "腰围", 80, "66–69"], ["belly", "腹围", 83, "69–72"], ["hip", "臀围", 99, "88–91"], ["thigh", "大腿", 59, "52–54"], ["calf", "小腿", 37, "33–34"], ["arm", "上臂", 29, "24–25"], ["ubust", "上胸", 97, "—"], ["lbust", "下胸", 78, "68–70"]];
+function Body({
+  measures,
+  core,
+  save,
+  avg7
+}) {
+  const [draft, setDraft] = useState({});
+  const base = {
+    date: START,
+    waist: 80,
+    belly: 83,
+    hip: 99,
+    thigh: 59,
+    calf: 37,
+    arm: 29,
+    ubust: 97,
+    lbust: 78
+  };
+  const all = [...measures, base].sort((a, b) => a.date < b.date ? 1 : -1);
+  const latest = all[0];
+  const waist = latest.waist ?? START_WAIST;
+  const pct = Math.min(100, Math.max(0, (START_WAIST - waist) / (START_WAIST - GOAL_WAIST) * 100));
+  const whr = latest.waist && latest.hip ? (latest.waist / latest.hip).toFixed(2) : null;
+  const commit = () => {
+    const e = {
+      date: key(new Date())
+    };
+    FIELDS.forEach(([k]) => {
+      if (draft[k]) e[k] = Number(draft[k]);
+    });
+    if (Object.keys(e).length === 1) return;
+    save({
+      ...core,
+      measures: [e, ...measures]
+    });
+    setDraft({});
+  };
+  const del = i => save({
+    ...core,
+    measures: measures.filter((_, j) => j !== i)
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "head simple"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "headmid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "date"
+  }, "身体"), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "每两周量一次 · 腰围是主指标"))), /*#__PURE__*/React.createElement("div", {
+    className: "waistcard"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "wbig"
+  }, waist, /*#__PURE__*/React.createElement("em", null, "cm")), /*#__PURE__*/React.createElement("span", {
+    className: "wsub"
+  }, "腰围 · 起点 ", START_WAIST, " · 目标 66–69", whr && ` · 腰臀比 ${whr}`), /*#__PURE__*/React.createElement("div", {
+    className: "wbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wfill",
+    style: {
+      width: `${pct}%`
+    }
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "wnote"
+  }, "体重会在平台期骗你，腰围不会。你100斤那会儿腿也不细，你觉得好看是因为有腰。腰围从80到72的这段路给你最大的视觉回报，而它发生在第12周，比你到100斤早得多。")), /*#__PURE__*/React.createElement("h3", {
+    className: "h3"
+  }, "里程碑"), /*#__PURE__*/React.createElement("div", {
+    className: "mstable"
+  }, MILESTONES.map(([d, kg, ws, note]) => {
+    const hit = avg7 != null && avg7 <= kg;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "msrow" + (hit ? " hit" : ""),
+      key: d
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "msd"
+    }, "第 ", d / 7, " 周"), /*#__PURE__*/React.createElement("span", {
+      className: "msw"
+    }, (kg * 2).toFixed(0), "斤 · 腰", ws), /*#__PURE__*/React.createElement("span", {
+      className: "msn"
+    }, note), hit && /*#__PURE__*/React.createElement("span", {
+      className: "mstick"
+    }, "✓"));
+  })), /*#__PURE__*/React.createElement("h3", {
+    className: "h3"
+  }, "记一次新的"), /*#__PURE__*/React.createElement("div", {
+    className: "mgrid"
+  }, FIELDS.map(([k, label, st, goal]) => /*#__PURE__*/React.createElement("label", {
+    className: "mfield",
+    key: k
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "mlab"
+  }, label, /*#__PURE__*/React.createElement("em", null, st, " → ", goal)), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.5",
+    inputMode: "decimal",
+    placeholder: String(latest[k] ?? st),
+    value: draft[k] ?? "",
+    onChange: e => setDraft({
+      ...draft,
+      [k]: e.target.value
+    })
+  })))), /*#__PURE__*/React.createElement("button", {
+    className: "save",
+    onClick: commit
+  }, "保存这次围度"), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "量法：早上空腹、上完厕所、穿内衣，和称重同一时间。软尺贴皮肤但不勒紧，能塞进一根手指。腰围量肚脐上1cm的最细处，每次量同一位置。顺便拍一组照片，正面侧面背面，同样光线同样衣服——这是所有指标里最诚实的一个。"), /*#__PURE__*/React.createElement("h3", {
+    className: "h3"
+  }, "历史"), all.map((m, i) => {
+    const prev = all[i + 1];
+    return /*#__PURE__*/React.createElement("div", {
+      className: "mrow",
+      key: m.date + i
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "mdate"
+    }, i === all.length - 1 ? "起点" : short(m.date)), /*#__PURE__*/React.createElement("span", {
+      className: "mvals"
+    }, FIELDS.filter(([k]) => m[k]).map(([k, l]) => {
+      const dd = prev && prev[k] ? m[k] - prev[k] : null;
+      return /*#__PURE__*/React.createElement("em", {
+        key: k
+      }, l, m[k], dd ? /*#__PURE__*/React.createElement("i", {
+        className: dd < 0 ? "dn" : "up"
+      }, dd > 0 ? "+" : "", dd.toFixed(1)) : null);
+    })), i < measures.length && /*#__PURE__*/React.createElement("button", {
+      className: "del",
+      onClick: () => del(i)
+    }, "删"));
+  }));
+}
+
+/* ══════════════ 计划 ══════════════ */
+
+function Plan({
+  core,
+  save
+}) {
+  const [open, setOpen] = useState("rules");
+  const [msg, setMsg] = useState("");
+  const fileRef = useRef(null);
+  const S = ({
+    id,
+    title,
+    children
+  }) => /*#__PURE__*/React.createElement("div", {
+    className: "acc"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "acch" + (open === id ? " on" : ""),
+    onClick: () => setOpen(open === id ? "" : id)
+  }, title, /*#__PURE__*/React.createElement("span", {
+    className: "chev"
+  }, open === id ? "−" : "+")), open === id && /*#__PURE__*/React.createElement("div", {
+    className: "accb"
+  }, children));
+  const flash = (text, ms = 4000) => {
+    setMsg(text);
+    setTimeout(() => setMsg(""), ms);
+  };
+  const exportData = () => {
+    try {
+      const payload = {
+        app: "减脂打卡完整版",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: core
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8"
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `减脂打卡备份_${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      flash("备份文件已导出，可以保存到电脑、手机或云盘");
+    } catch (e) {
+      flash("导出失败，请检查浏览器的下载权限");
+    }
+  };
+  const importData = async event => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const raw = JSON.parse(text);
+      const source = raw && raw.data ? raw.data : raw;
+      const imported = {
+        days: source?.days && typeof source.days === "object" ? source.days : {},
+        measures: Array.isArray(source?.measures) ? source.measures : [],
+        weekly: source?.weekly && typeof source.weekly === "object" ? source.weekly : {},
+        custom: source?.custom && typeof source.custom === "object" ? source.custom : {}
+      };
+      const hasData = Object.keys(imported.days).length || imported.measures.length || Object.keys(imported.weekly).length || Object.keys(imported.custom).length;
+      if (!hasData) throw new Error("empty");
+      if (!window.confirm("导入备份会覆盖当前这台设备上的记录。确定继续吗？")) return;
+      save(imported);
+      flash("备份导入成功，当前记录已恢复");
+    } catch (e) {
+      flash("导入失败：请选择本应用导出的 JSON 备份文件");
+    }
+  };
+  const reset = () => {
+    if (window.confirm("会清空所有打卡记录和围度数据，删了就找不回来了。确定吗？")) {
+      save({
+        days: {},
+        measures: [],
+        weekly: {},
+        custom: {}
+      });
+      setMsg("已清空");
+      setTimeout(() => setMsg(""), 3000);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "page"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "head simple"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "headmid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "date"
+  }, "计划"), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "128斤 → 100斤 · 约6个月"))), /*#__PURE__*/React.createElement(S, {
+    id: "rules",
+    title: "前两周只做这6条"
+  }, /*#__PURE__*/React.createElement("ol", {
+    className: "ol"
+  }, RULES1.map((r, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, r))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "在家不做饭的这两周，三餐按家里的吃。吃饭顺序：先菜、再肉蛋、最后主食。米饭小碗盛一次不添。红烧油炸勾芡的菜，温水涮一下再吃，一顿能省100–200大卡。")), /*#__PURE__*/React.createElement(S, {
+    id: "stage",
+    title: "全程分五段"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mstable"
+  }, [["准备期", "第1–2周", "128 → 125斤", "只做6条规则，调作息"], ["冲刺期", "第3–4周", "125 → 119斤", "上班了，建立三餐节奏"], ["加速期", "第5–12周", "119 → 110斤", "完整菜单 + 每周4练"], ["稳定期", "第13–20周", "110 → 103斤", "每周约1斤"], ["收尾期", "第21–24周", "103 → 100斤", "塑形为主"]].map(r => /*#__PURE__*/React.createElement("div", {
+    className: "msrow",
+    key: r[0]
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "msd"
+  }, r[0]), /*#__PURE__*/React.createElement("span", {
+    className: "msw"
+  }, r[2]), /*#__PURE__*/React.createElement("span", {
+    className: "msn"
+  }, r[1], " · ", r[3]))))), /*#__PURE__*/React.createElement(S, {
+    id: "drink",
+    title: "喝什么（不用喝白水）"
+  }, /*#__PURE__*/React.createElement("ul", {
+    className: "ul"
+  }, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "冷泡茶"), "\u3000睡前把茶包丢进1L冷水瓶放冰箱，第二天一整天的量。冷泡不苦不涩，比热茶好喝"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "柠檬水"), "\u3000柠檬切片冷冻，每次丢2片，可以加薄荷"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "水果茶"), "\u3000冷水里丢草莓+柠檬、橙子片、黄瓜片、桃子块"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "自制奶茶"), "\u3000茶泡浓 + 牛奶200ml + 代糖，一杯不到2块，130大卡，每天喝都行")), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "只有三条要求：不加糖（赤藓糖醇、罗汉果糖这类代糖可以）、不喝果汁（果糖对脂肪肝最差）、起床那杯要温的。外买奶茶每周2杯，无糖去小料。")), /*#__PURE__*/React.createElement(S, {
+    id: "food",
+    title: "能吃什么"
+  }, FOODS.map(([t, v]) => /*#__PURE__*/React.createElement("div", {
+    className: "fx",
+    key: t
+  }, /*#__PURE__*/React.createElement("b", null, t), /*#__PURE__*/React.createElement("p", null, v))), /*#__PURE__*/React.createElement("h4", {
+    className: "h4"
+  }, "避开的"), /*#__PURE__*/React.createElement("p", {
+    className: "avoid"
+  }, AVOID)), /*#__PURE__*/React.createElement(S, {
+    id: "train",
+    title: "训练课表"
+  }, TRAINING.map(([d, t, n]) => /*#__PURE__*/React.createElement("div", {
+    className: "trow",
+    key: d
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "td"
+  }, d), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, t), n && /*#__PURE__*/React.createElement("p", null, n)))), /*#__PURE__*/React.createElement("h4", {
+    className: "h4"
+  }, "每天3分钟"), DAILY3.map(([a, b, c]) => /*#__PURE__*/React.createElement("div", {
+    className: "trow",
+    key: a
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "td"
+  }, a), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, b), /*#__PURE__*/React.createElement("p", null, c)))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "永远不做负重侧屈和大重量转体，会把侧腰练厚，和你要的沙漏腰相反。重点顺序是核心 > 臀腿 > 溜肩矫正，因为腰腹才是你的可变区，腿臀是遗传区，追紧和线条不追细。")), /*#__PURE__*/React.createElement(S, {
+    id: "kitchen",
+    title: "搬家后买什么 · 周末怎么备餐"
+  }, SHOPPING.map(([n, p, u]) => /*#__PURE__*/React.createElement("div", {
+    className: "trow",
+    key: n
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "td price"
+  }, p), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, n), /*#__PURE__*/React.createElement("p", null, u)))), /*#__PURE__*/React.createElement("h4", {
+    className: "h4"
+  }, "周末1小时，管3–4天"), /*#__PURE__*/React.createElement("ol", {
+    className: "ol"
+  }, PREP.map((p, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, p))), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "之后工作日晚上：微波饭 + 热蛋白质 + 现炒一个青菜 = 8分钟出餐，比等外卖还快。万能调味公式：生抽 + 蒜 + 一点蚝油。")), /*#__PURE__*/React.createElement(S, {
+    id: "fix",
+    title: "出状况了看这里"
+  }, FIXES.map(([t, d]) => /*#__PURE__*/React.createElement("div", {
+    className: "fx",
+    key: t
+  }, /*#__PURE__*/React.createElement("b", null, t), /*#__PURE__*/React.createElement("p", null, d)))), /*#__PURE__*/React.createElement(S, {
+    id: "keep",
+    title: "到了100斤之后"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "p"
+  }, "上次你不是意志力垮了，是旅游结束后计划没有下一步，然后和朋友天天吃饭把体重推了回来。这次终点后有明确的下一步。"), /*#__PURE__*/React.createElement("ul", {
+    className: "ul"
+  }, /*#__PURE__*/React.createElement("li", null, "热量用4周从1400慢慢加到1700–1800"), /*#__PURE__*/React.createElement("li", null, "运动降到每周2–3次，称重降到每周1次"), /*#__PURE__*/React.createElement("li", null, "外买奶茶放宽到每周3–4杯，聚餐正常参加")), /*#__PURE__*/React.createElement("h4", {
+    className: "h4"
+  }, "永久红线，只有4条"), /*#__PURE__*/React.createElement("ol", {
+    className: "ol"
+  }, /*#__PURE__*/React.createElement("li", null, "每天起床喝400ml温柠檬水"), /*#__PURE__*/React.createElement("li", null, "每天有一顿是「蛋白质 + 蔬菜」结构的正经饭"), /*#__PURE__*/React.createElement("li", null, "体重超过目标 +3斤，就恢复减脂餐两周"), /*#__PURE__*/React.createElement("li", null, "每周至少运动2次")), /*#__PURE__*/React.createElement("p", {
+    className: "foot"
+  }, "第3条最重要。上次你是慢慢涨回来的，没有触发点，等发现时已经涨了28斤。有了这条线，你最多在目标上下3斤浮动。")), /*#__PURE__*/React.createElement(S, {
+    id: "data",
+    title: "数据"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "p"
+  }, "记录自动保存在当前浏览器的本地存储里。建议定期导出 JSON 备份，换电脑、清浏览器数据或重装浏览器前先保存一份。"), /*#__PURE__*/React.createElement("div", {
+    className: "backup-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "save",
+    onClick: exportData
+  }, "导出备份文件"), /*#__PURE__*/React.createElement("button", {
+    className: "import-btn",
+    onClick: () => fileRef.current?.click()
+  }, "导入备份文件"), /*#__PURE__*/React.createElement("input", {
+    ref: fileRef,
+    className: "backup-file",
+    type: "file",
+    accept: "application/json,.json",
+    onChange: importData
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "backuphint"
+  }, "导出后会得到一个 .json 文件；导入会完整覆盖当前记录。"), /*#__PURE__*/React.createElement("button", {
+    className: "danger",
+    onClick: reset
+  }, "清空所有记录"), msg && /*#__PURE__*/React.createElement("p", {
+    className: "okmsg"
+  }, msg)));
+}
+
+/* ══════════════ 样式 ══════════════ */
+
+function Style() {
+  return /*#__PURE__*/React.createElement("style", null, `
+  .app{--paper:#F2F4F0;--ink:#1E2B25;--muted:#7F8B83;--line:#DDE3DC;--jade:#2F6B52;--celadon:#A9C4B2;
+       --clay:#B5654A;--plum:#8E6B8A;--card:#FBFCFA;
+       background:var(--paper);color:var(--ink);font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+       min-height:100vh;max-width:560px;margin:0 auto;padding-bottom:76px;-webkit-font-smoothing:antialiased}
+  .app *{box-sizing:border-box}
+  .loading{padding:64px 24px;text-align:center;color:var(--muted);font-size:14px}
+  .page{padding:0 16px}
+  .head{display:flex;align-items:center;gap:8px;padding:20px 0 14px;border-bottom:1px solid var(--line)}
+  .head.simple{padding-bottom:16px}
+  .headmid{flex:1;text-align:center}
+  .head.simple .headmid{text-align:left}
+  .date{font-family:Georgia,"Songti SC",serif;font-size:24px;letter-spacing:.5px}
+  .wd{font-size:14px;color:var(--muted);font-family:inherit}
+  .sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+  .nav{width:36px;height:36px;border:1px solid var(--line);background:var(--card);border-radius:50%;font-size:19px;color:var(--ink);cursor:pointer;line-height:1}
+  .nav:disabled{opacity:.28;cursor:default}
+  .backtoday{display:block;margin:8px auto 0;border:0;background:none;color:var(--jade);font-size:12.5px;cursor:pointer;text-decoration:underline}
+  .streak{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding:9px 12px;background:var(--card);
+          border:1px solid var(--line);border-radius:10px;font-size:12px;color:var(--muted)}
+  .streak b{font-family:Georgia,serif;font-size:14px;color:var(--jade)}
+
+  .row{display:flex;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .rail{width:46px;flex:none;padding-top:2px}
+  .time{font-family:Georgia,serif;font-size:12px;color:var(--muted);letter-spacing:.3px}
+  .rbody{flex:1;min-width:0}
+  .rlabel{font-size:14px;font-weight:600;margin-bottom:9px;display:flex;flex-wrap:wrap;align-items:baseline;gap:7px}
+  .hint{font-size:11px;font-weight:400;color:var(--muted)}
+  .inline-note{margin:9px 0 0;font-size:11.5px;line-height:1.65;color:var(--muted);
+               border-left:2px solid var(--celadon);padding-left:9px}
+
+  .wrow{display:flex;align-items:center;gap:8px}
+  .wrow.mt{margin-top:10px}
+  .wnum{width:104px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);
+        font-family:Georgia,serif;font-size:19px;color:var(--ink)}
+  .wnum.sm{width:104px;font-size:15px;padding:8px 10px}
+  .unit{font-size:12.5px;color:var(--muted)}
+  .jin{margin-left:4px;font-size:13px;color:var(--jade);font-family:Georgia,serif}
+  .note{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13.5px;color:var(--ink)}
+  .toggles{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap}
+  .tlabel{font-size:12.5px;color:var(--muted)}
+  .pill{padding:7px 13px;border:1px solid var(--line);border-radius:16px;background:var(--card);font-size:12.5px;color:var(--ink);cursor:pointer;font-family:inherit}
+  .pill.on{background:var(--jade);border-color:var(--jade);color:#fff}
+  .pill.on.warn{background:var(--clay);border-color:var(--clay)}
+  .pill.on.period{background:var(--plum);border-color:var(--plum)}
+
+  .cups{display:flex;gap:5px}
+  .cup{flex:1;max-width:34px;padding:0;border:0;background:none;cursor:pointer;aspect-ratio:24/30}
+  .cup-body{fill:none;stroke:var(--line);stroke-width:1.4}
+  .cup.on .cup-body{stroke:var(--jade)}
+  .cup-fill{fill:var(--celadon)}
+  .waterline{margin-top:9px;font-size:12.5px;color:var(--muted)}
+  .waterline strong{font-family:Georgia,serif;font-size:16px;color:var(--jade)}
+  .tip{display:block;margin-top:4px;font-size:11.5px;line-height:1.55}
+
+  .picker{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);
+          font-size:13.5px;color:var(--ink);font-family:inherit;appearance:none;
+          background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+          background-position:calc(100% - 16px) 18px,calc(100% - 11px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  .tiny{margin-top:7px;border:0;background:none;color:var(--jade);font-size:11.5px;cursor:pointer;font-family:inherit;padding:0}
+  .addbox{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .addbox input{flex:1;min-width:78px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:12.5px;color:var(--ink)}
+  .addbox button{padding:8px 12px;border:0;border-radius:8px;background:var(--jade);color:#fff;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .addbox button.ghost{background:none;color:var(--muted);border:1px solid var(--line)}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg-btn{padding:7px 12px;border:1px solid var(--line);border-radius:16px;background:var(--card);font-size:12.5px;color:var(--ink);cursor:pointer;font-family:inherit}
+  .seg-btn.on{background:var(--jade);border-color:var(--jade);color:#fff}
+  .seg-btn.on.warn{background:var(--clay);border-color:var(--clay)}
+
+  .tally{display:flex;gap:10px;margin:18px 0 10px}
+  .tcell{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .tnum{display:block;font-family:Georgia,serif;font-size:26px;color:var(--jade)}
+  .tlab{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .foot{font-size:11.5px;color:var(--muted);line-height:1.7;margin:10px 0 22px}
+  .err{font-size:12px;color:var(--clay);margin-bottom:20px}
+  .okmsg{font-size:12px;color:var(--jade);margin-top:10px}
+  .empty{font-size:13px;color:var(--muted);padding:20px 0;line-height:1.75}
+  .rulebox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:22px}
+  .rulebox .foot{margin-bottom:0}
+
+  .filters{display:flex;gap:6px;margin:12px 0 4px;flex-wrap:wrap}
+  .fbtn{padding:6px 12px;border:1px solid var(--line);border-radius:15px;background:var(--card);font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .fbtn.on{background:var(--jade);border-color:var(--jade);color:#fff}
+  .lrow{display:flex;align-items:center;gap:9px;width:100%;padding:12px 0;border:0;border-bottom:1px solid var(--line);
+        background:none;text-align:left;cursor:pointer;font-family:inherit}
+  .ldate{font-family:Georgia,serif;font-size:13px;color:var(--muted);flex:none;width:52px}
+  .ldate em{display:block;font-style:normal;font-size:10px;font-family:inherit}
+  .lw{font-family:Georgia,serif;font-size:15px;flex:none;width:56px;color:var(--ink)}
+  .lw em{font-style:normal;font-size:10px;color:var(--muted);margin-left:2px}
+  .ldots{flex:none;display:flex;gap:3px;width:48px;font-size:11px;color:var(--muted)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--line);display:block}
+  .dot.on{background:var(--jade)}
+  .lc{font-family:Georgia,serif;font-size:12px;color:var(--muted);flex:none;width:38px;text-align:right}
+  .lflags{flex:1;display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;min-width:0}
+  .lflags em{font-style:normal;font-size:10px;padding:2px 6px;border-radius:9px}
+  .fb{background:#F4E3DD;color:var(--clay)}
+  .fp{background:#EFE4EE;color:var(--plum)}
+  .fn{color:var(--muted);background:none;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .bignums{display:flex;gap:10px;margin:4px 0 14px}
+  .bignums>div{flex:1;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 6px}
+  .bn{display:block;font-family:Georgia,serif;font-size:23px}
+  .bn.accent{color:var(--jade)}
+  .bl{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+  .prog{margin-bottom:18px}
+  .progbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+  .progfill{height:100%;background:var(--jade);border-radius:3px}
+  .proglab{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+  .chart{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 6px 4px}
+  .chart .foot{padding:0 10px}
+  .alert{background:#FBF3EF;border:1px solid #EAD5CB;border-radius:12px;padding:14px;margin-bottom:18px}
+  .alert b{font-size:13px;color:var(--clay)}
+  .alert p{margin:6px 0 0;font-size:12px;line-height:1.75;color:var(--ink)}
+  .h3{font-size:14px;margin:26px 0 12px;font-weight:600}
+  .h4{font-size:13px;margin:18px 0 8px;font-weight:600}
+  .wcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:9px}
+  .wtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .wlab{font-size:13px;font-weight:600}
+  .wlab em{font-style:normal;font-weight:400;font-size:11px;color:var(--muted);margin-left:6px}
+  .wavg{font-family:Georgia,serif;font-size:16px}
+  .wavg em{font-style:normal;font-size:12px;margin-left:6px}
+  .wavg .down{color:var(--jade)}
+  .wavg .up{color:var(--clay)}
+  .wgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 8px;font-size:11.5px;color:var(--muted)}
+  .wgrid b{font-family:Georgia,serif;font-size:13.5px;color:var(--ink)}
+  .wgrid b.bad{color:var(--clay)}
+  .refl{display:flex;flex-direction:column;gap:6px;margin-top:11px}
+  .refl input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:12px;color:var(--ink)}
+
+  .waistcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:8px}
+  .wbig{font-family:Georgia,serif;font-size:40px;color:var(--jade);line-height:1}
+  .wbig em{font-style:normal;font-size:14px;margin-left:4px;color:var(--muted)}
+  .wsub{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  .wbar{height:5px;background:var(--line);border-radius:3px;margin:14px 0 10px;overflow:hidden}
+  .wfill{height:100%;background:var(--jade);border-radius:3px}
+  .wnote{font-size:12px;color:var(--muted);line-height:1.75;margin:0}
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .mfield{display:flex;flex-direction:column;gap:5px}
+  .mlab{font-size:12px}
+  .mlab em{font-style:normal;color:var(--muted);font-size:10.5px;margin-left:5px}
+  .mfield input{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);
+                font-family:Georgia,serif;font-size:15px;color:var(--ink);width:100%}
+  .save{width:100%;margin-top:12px;padding:12px;border:0;border-radius:10px;background:var(--jade);color:#fff;font-size:14px;cursor:pointer;font-family:inherit}
+  .danger{width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--clay);font-size:13px;cursor:pointer;font-family:inherit}
+  .mrow{display:flex;gap:9px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .mdate{font-family:Georgia,serif;color:var(--muted);flex:none;width:46px}
+  .mvals{flex:1;display:flex;flex-wrap:wrap;gap:4px 9px}
+  .mvals em{font-style:normal;color:var(--ink)}
+  .mvals i{font-style:normal;font-size:10px;margin-left:2px}
+  .mvals .dn{color:var(--jade)}
+  .mvals .up{color:var(--clay)}
+  .del{border:0;background:none;color:var(--muted);font-size:11px;cursor:pointer;flex:none}
+
+  .acc{border-bottom:1px solid var(--line)}
+  .acch{width:100%;display:flex;justify-content:space-between;align-items:center;padding:15px 0;border:0;background:none;
+        font-size:14px;color:var(--ink);cursor:pointer;font-family:inherit;text-align:left}
+  .acch.on{font-weight:600}
+  .chev{color:var(--muted);font-size:16px}
+  .accb{padding-bottom:18px}
+  .ol,.ul{margin:0 0 6px;padding-left:20px;font-size:13px;line-height:1.85}
+  .ul{list-style:none;padding-left:0}
+  .ul li{margin-bottom:7px}
+  .p{font-size:13px;line-height:1.8;margin:0 0 10px}
+  .avoid{font-size:12px;color:var(--muted);line-height:1.85;margin:0}
+  .mstable{font-size:13px}
+  .msrow{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .msrow.hit .msw{color:var(--jade)}
+  .msd{font-family:Georgia,serif;color:var(--muted);width:62px;flex:none;font-size:12px}
+  .msw{font-weight:600;width:96px;flex:none;font-size:12.5px}
+  .msn{color:var(--muted);font-size:12px;flex:1}
+  .mstick{color:var(--jade)}
+  .trow{display:flex;gap:10px;padding:9px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .td{width:46px;flex:none;color:var(--muted)}
+  .td.price{font-family:Georgia,serif;font-size:12px}
+  .trow p{margin:3px 0 0;font-size:11.5px;color:var(--muted);line-height:1.65}
+  .fx{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .fx b{font-size:13px}
+  .fx p{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.75}
+
+  .backup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .backup-actions .save{margin-top:0}
+  .import-btn{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--jade);font-size:14px;cursor:pointer;font-family:inherit}
+  .backup-file{display:none}
+  .backuphint{margin:8px 0 0;font-size:11px;line-height:1.6;color:var(--muted)}
+
+  .tabs{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;display:flex;background:var(--card);border-top:1px solid var(--line)}
+  .tab{flex:1;padding:14px 0 18px;border:0;background:none;font-size:12.5px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .tab.on{color:var(--jade);font-weight:600;box-shadow:inset 0 2px 0 var(--jade)}
+  @media (prefers-reduced-motion:no-preference){.cup,.pill,.seg-btn,.fbtn{transition:all .15s ease}}
+`);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
+
+  };
+  loadLib(0, 0, function(){
+    if(window.React && window.ReactDOM && window.Recharts){
+      window.__startApp();
+    } else {
+      setTimeout(arguments.callee, 200);
+    }
+  });
+})();
 </script>
 </body>
 </html>
