@@ -4,196 +4,188 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2F4F0">
-<title>减脂打卡完整版</title>
-
-<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
-
+<title>减脂打卡</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-body{background:#F2F4F0;padding:16px;color:#222;line-height:1.6}
-.card{background:#fff;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #0000000c}
-h2{font-size:18px;margin-bottom:12px}
-.btn{padding:8px 14px;border-radius:12px;border:none;background:#dde6d5;color:#222;margin:4px;font-size:14px;cursor:pointer}
-.btn.active{background:#87a868;color:white}
-input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:12px;margin:8px 0;font-size:16px}
+body{background:#F2F4F0;padding:14px;color:#222;line-height:1.6;max-width:600px;margin:0 auto}
+.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+h1{text-align:center;margin:16px 0 20px;font-size:22px}
+h2{font-size:17px;margin-bottom:10px}
+.btn{padding:8px 14px;border-radius:12px;border:none;background:#e9efe3;color:#333;margin:4px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn.active{background:#87a868;color:#fff}
+input,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:12px;margin:6px 0;font-size:15px;font-family:inherit}
+textarea{min-height:70px;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.row .label{flex:1}
+.row .label small{display:block;color:#888;font-size:12px}
+.row input{width:140px;margin:0}
 .cups{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.cups button{border:none;background:#e9efe3;border-radius:8px;padding:6px;cursor:pointer}
-.cups button.on{background:#87a868;color:white}
-.row{display:flex;gap:8px;align-items:center;margin:8px 0}
-.time{width:70px}
-.hint{font-size:13px;color:#666}
-#loading{text-align:center;padding:60px 20px;color:#888}
+.cups button{width:36px;height:36px;border:none;background:#e9efe3;border-radius:8px;cursor:pointer;font-size:18px}
+.cups button.on{background:#87a868}
+.chart-wrap{width:100%;height:240px;position:relative}
+canvas{width:100%;height:100%}
+.empty{text-align:center;padding:30px;color:#999;font-size:14px}
+.footer{text-align:center;margin:24px 0;color:#aaa;font-size:12px}
 </style>
 </head>
 <body>
-<div id="root"><div id="loading">⏳ 页面加载中，请稍候...</div></div>
+<h1>🥗 减脂打卡</h1>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
-const { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } = Recharts;
-
-const START = "2026-09-03";
-const START_KG = 64.0;
-const GOAL_KG = 59.0;
-const OK_KG = 52.5;
-const START_WAIST = 80;
-const GOAL_WAIST = 67;
-
-const BREAKFAST = [
-  ["豆浆400ml，茶叶蛋2个 + 玉米半根", 310],
-  ["牛奶250 + 全麦面包2片 + 水煮蛋1", 340],
-  ["燕麦40g，牛奶250 + 香蕉半根", 330],
-  ["无糖酸奶200g + 蓝莓一小盒 + 坚果10g", 315],
-  ["红薯150g + 鸡蛋1个 + 无糖豆浆300ml", 320]
-];
-const LUNCH = [
-  ["一拳杂粮饭，两拳绿叶菜，一掌瘦肉", 450],
-  ["荞麦面干60g，大量青菜，鸡蛋1个，虾仁8只", 440],
-  ["玉米1根 + 清蒸鱼120g + 清炒时蔬一大盘", 430],
-  ["紫薯180g + 豆腐200g + 凉拌黄瓜", 420],
-  ["杂粮饭半碗，番茄金针菇，鸡胸肉110g", 445]
-];
-const DINNER = [
-  ["大量蔬菜，豆腐/鱼虾，不吃主食", 320],
-  ["菌菇蔬菜汤 + 鸡蛋一个 + 凉拌海带丝", 300],
-  ["虾仁100g + 西兰花一大份，小番茄若干", 310],
-  ["嫩豆腐250g煮汤 + 炒青菜，无主食", 290],
-  ["冬瓜海带汤 + 去皮鸡腿肉90g，无主食", 315]
-];
-const SNACK = [
-  ["小番茄15颗", 45],
-  ["黄瓜一根", 18],
-  ["蓝莓一小盒", 70],
-  ["无糖酸奶100g", 70],
-  ["一个小猕猴桃", 60]
-];
-const SPORT_LIST = [
-  ["快走45分钟", 220],
-  ["跳绳20分钟", 240],
-  ["帕梅拉30分钟", 210],
-  ["瑜伽40分钟", 160],
-  ["椭圆机35分钟", 250],
-  ["慢跑30分钟", 270],
-  ["无运动", 0]
-];
-
-const Cups = ({ n, onSet }) => (
-  <div className="cups">
-    {Array.from({ length:8 }).map((_,i)=>{
-      const idx=i+1;
-      return <button key={i} className={n>=idx?"on":""} onClick={()=>onSet(idx===n?0:idx)}>
-        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 16h16l-1 6H5zM7 4h10V2H7z" fill="currentColor"/></svg>
-      </button>
-    })}
+<div class="card">
+  <h2>📅 <span id="today"></span></h2>
+  <div class="row">
+    <div class="label">晨起体重(kg)<small>初始64.0 → 目标59.0</small></div>
+    <input type="number" step="0.1" id="weight" placeholder="今日体重">
   </div>
-);
-
-const Seg = ({ options, value, onChange }) => (
-  <div>
-    {options.map((i,idx)=>(
-      <button key={idx} className={"btn "+(value&&value[0]===i[0]?"active":"")} onClick={()=>onChange(value&&value[0]===i[0]?null:i)}>{i[0]}</button>
-    ))}
+  <div class="row">
+    <div class="label">晨起腰围(cm)<small>初始80 → 目标67</small></div>
+    <input type="number" step="0.5" id="waist" placeholder="今日腰围">
   </div>
-);
+</div>
 
-const Row = ({ time, label, hint, children }) => (
-  <div className="row">
-    <span className="time">{time}</span>
-    <div style={{flex:1}}>
-      <div>{label}</div>
-      {hint&&<div className="hint">{hint}</div>}
-    </div>
-    <div style={{minWidth:140}}>{children}</div>
-  </div>
-);
+<div class="card">
+  <h2>💧 喝水（每杯250ml）</h2>
+  <div class="cups" id="cups"></div>
+  <div style="text-align:center;font-size:14px;color:#666">已喝 <span id="waterNum">0</span> ml / 目标 2000ml</div>
+</div>
 
-function App(){
-  const [log,setLog]=useState(()=>{try{return JSON.parse(localStorage.getItem("fatlog")||"[]")}catch(e){return []}});
-  const [today,setToday]=useState(()=>{
-    const d=new Date().toISOString().slice(0,10);
-    const found=log.find(x=>x.date===d);
-    if(found) return found;
-    return {date:d,weight:"",waist:"",water:0,breakfast:null,lunch:null,dinner:null,snack:null,sport:null,note:""};
+<div class="card"><h2>🍽️ 早餐</h2><div id="breakfast"></div></div>
+<div class="card"><h2>🍱 午餐</h2><div id="lunch"></div></div>
+<div class="card"><h2>🥗 晚餐</h2><div id="dinner"></div></div>
+<div class="card"><h2>🍎 加餐（可选）</h2><div id="snack"></div></div>
+<div class="card"><h2>🏃 运动</h2><div id="sport"></div></div>
+
+<div class="card">
+  <h2>📝 备注</h2>
+  <textarea id="note" placeholder="记录身体感受、睡眠、有没有暴食等"></textarea>
+</div>
+
+<div class="card">
+  <h2>📈 体重曲线</h2>
+  <div class="chart-wrap"><canvas id="chart"></canvas><div class="empty" id="chartEmpty">还没有体重记录</div></div>
+</div>
+
+<div class="footer">数据保存在浏览器本地，清缓存会丢失，建议偶尔截图备份</div>
+
+<script>
+// ===== 数据 =====
+const MEALS = {
+  breakfast:["豆浆400ml+茶叶蛋2个+玉米半根","牛奶250+全麦面包2片+水煮蛋1","燕麦40g+牛奶250+香蕉半根","无糖酸奶200g+蓝莓+坚果10g","红薯150g+鸡蛋1个+无糖豆浆300ml"],
+  lunch:["一拳杂粮饭+两拳绿叶菜+一掌瘦肉","荞麦面60g+青菜+鸡蛋+虾仁8只","玉米1根+清蒸鱼120g+时蔬","紫薯180g+豆腐200g+凉拌黄瓜","杂粮饭半碗+番茄金针菇+鸡胸肉110g"],
+  dinner:["大量蔬菜+豆腐/鱼虾+无主食","菌菇蔬菜汤+鸡蛋1个+凉拌海带丝","虾仁100g+西兰花+小番茄","嫩豆腐250g煮汤+炒青菜+无主食","冬瓜海带汤+去皮鸡腿肉90g+无主食"],
+  snack:["小番茄15颗","黄瓜一根","蓝莓一小盒","无糖酸奶100g","小猕猴桃1个"],
+  sport:["快走45分钟","跳绳20分钟","帕梅拉30分钟","瑜伽40分钟","椭圆机35分钟","慢跑30分钟","无运动"]
+};
+
+// ===== 状态 =====
+const today = new Date().toISOString().slice(0,10);
+let data = JSON.parse(localStorage.getItem("fatlog")||"[]");
+let todayData = data.find(d=>d.date===today) || {date:today,weight:"",waist:"",water:0,breakfast:-1,lunch:-1,dinner:-1,snack:-1,sport:-1,note:""};
+
+function save(){
+  data = data.filter(d=>d.date!==today);
+  data.push({...todayData});
+  localStorage.setItem("fatlog",JSON.stringify(data));
+}
+
+// ===== 渲染日期 =====
+document.getElementById("today").textContent = today;
+
+// ===== 体重腰围 =====
+const wInput = document.getElementById("weight");
+const waistInput = document.getElementById("waist");
+wInput.value = todayData.weight;
+waistInput.value = todayData.waist;
+wInput.oninput = e=>{todayData.weight=e.target.value;save();drawChart()};
+waistInput.oninput = e=>{todayData.waist=e.target.value;save()};
+
+// ===== 水杯 =====
+const cupsEl = document.getElementById("cups");
+function renderCups(){
+  cupsEl.innerHTML = "";
+  for(let i=1;i<=8;i++){
+    const b = document.createElement("button");
+    b.textContent = "💧";
+    b.className = todayData.water>=i ? "on" : "";
+    b.onclick = ()=>{todayData.water = todayData.water===i?0:i;save();renderCups()};
+    cupsEl.appendChild(b);
+  }
+  document.getElementById("waterNum").textContent = todayData.water*250;
+}
+renderCups();
+
+// ===== 餐食按钮 =====
+function renderMeal(key){
+  const el = document.getElementById(key);
+  el.innerHTML = "";
+  MEALS[key].forEach((name,idx)=>{
+    const b = document.createElement("button");
+    b.className = "btn"+(todayData[key]===idx?" active":"");
+    b.textContent = name;
+    b.onclick = ()=>{todayData[key] = todayData[key]===idx?-1:idx;save();renderMeal(key)};
+    el.appendChild(b);
   });
-
-  const save=useCallback((obj)=>{
-    const d=obj.date;
-    let arr=[...log.filter(x=>x.date!==d),obj];
-    setLog(arr);
-    try{localStorage.setItem("fatlog",JSON.stringify(arr))}catch(e){}
-    setToday(obj);
-  },[log]);
-
-  const chartData=useMemo(()=>{
-    return log.filter(x=>x.weight).sort((a,b)=>a.date.localeCompare(b.date)).map(i=>({
-      date:i.date.slice(5),
-      w:Number(i.weight),
-      waist:i.waist?Number(i.waist):null
-    }))
-  },[log]);
-
-  return <div style={{maxWidth:600,margin:"0 auto"}}>
-    <h1 style={{textAlign:"center",margin:"20px 0 24px"}}>🥗 减脂打卡</h1>
-
-    <div className="card">
-      <h2>📅 {today.date}</h2>
-      <Row time="晨起" label="体重(kg)" hint={`初始${START_KG} → 目标${GOAL_KG}`}>
-        <input type="number" step="0.1" value={today.weight||""} onChange={e=>save({...today,weight:e.target.value})} placeholder="填今天体重"/>
-      </Row>
-      <Row time="晨起" label="腰围(cm)" hint={`初始${START_WAIST} → 目标${GOAL_WAIST}`}>
-        <input type="number" step="0.5" value={today.waist||""} onChange={e=>save({...today,waist:e.target.value})} placeholder="填今天腰围"/>
-      </Row>
-    </div>
-
-    <div className="card">
-      <h2>💧 喝水（每杯250ml）</h2>
-      <Cups n={today.water} onSet={(v)=>save({...today,water:v})}/>
-      <div style={{textAlign:"center",marginTop:8}}>已喝 {today.water*250} ml / 目标 2000ml</div>
-    </div>
-
-    <div className="card"><h2>🍽️ 早餐</h2><Seg options={BREAKFAST} value={today.breakfast} onChange={v=>save({...today,breakfast:v})}/></div>
-    <div className="card"><h2>🍱 午餐</h2><Seg options={LUNCH} value={today.lunch} onChange={v=>save({...today,lunch:v})}/></div>
-    <div className="card"><h2>🥗 晚餐</h2><Seg options={DINNER} value={today.dinner} onChange={v=>save({...today,dinner:v})}/></div>
-    <div className="card"><h2>🍎 加餐（可选）</h2><Seg options={SNACK} value={today.snack} onChange={v=>save({...today,snack:v})}/></div>
-    <div className="card"><h2>🏃 运动</h2><Seg options={SPORT_LIST} value={today.sport} onChange={v=>save({...today,sport:v})}/></div>
-
-    <div className="card">
-      <h2>📝 备注</h2>
-      <textarea style={{width:"100%",border:"1px solid #ddd",borderRadius:12,padding:12,minHeight:80,fontSize:15}}
-        value={today.note||""} onChange={e=>save({...today,note:e.target.value})} placeholder="记录身体感受、睡眠、有没有暴食等"></textarea>
-    </div>
-
-    <div className="card">
-      <h2>📈 体重曲线</h2>
-      {chartData.length===0
-        ?<div style={{padding:20,textAlign:"center",color:"#777"}}>还没有体重记录</div>
-        :<ResponsiveContainer width="100%" height={260}>
-          <LineChart data={chartData} margin={{top:5,right:10,left:0,bottom:5}}>
-            <XAxis dataKey="date" tick={{fontSize:11}}/>
-            <YAxis domain={["dataMin-1","dataMax+1"]} tick={{fontSize:11}}/>
-            <Tooltip/>
-            <ReferenceLine y={GOAL_KG} stroke="#87a868" strokeDasharray="5 5" label={{value:"目标",position:"right",fontSize:11}}/>
-            <Line type="monotone" dataKey="w" stroke="#447220" strokeWidth={2} dot={{r:3}} name="体重kg"/>
-          </LineChart>
-        </ResponsiveContainer>
-      }
-    </div>
-
-    <div style={{textAlign:"center",margin:"30px 0",color:"#888",fontSize:13}}>
-      数据保存在浏览器本地，清缓存会丢失，建议偶尔截图备份。
-    </div>
-  </div>
 }
+["breakfast","lunch","dinner","snack","sport"].forEach(renderMeal);
 
-try{
-  const root=ReactDOM.createRoot(document.getElementById("root"));
-  root.render(<App/>);
-}catch(e){
-  document.getElementById("root").innerHTML="<div style='padding:40px;text-align:center;color:#c00'>页面加载出错："+e.message+"<br>请刷新页面试试</div>";
+// ===== 备注 =====
+const noteEl = document.getElementById("note");
+noteEl.value = todayData.note;
+noteEl.oninput = e=>{todayData.note=e.target.value;save()};
+
+// ===== 体重曲线（Canvas） =====
+function drawChart(){
+  const canvas = document.getElementById("chart");
+  const empty = document.getElementById("chartEmpty");
+  const records = data.filter(d=>d.weight).sort((a,b)=>a.date.localeCompare(b.date));
+  if(records.length<1){empty.style.display="block";canvas.style.display="none";return}
+  empty.style.display="none";canvas.style.display="block";
+  const dpr = window.devicePixelRatio||1;
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  const pad = {l:36,r:16,t:16,b:28};
+  const cw = w-pad.l-pad.r, ch = h-pad.t-pad.b;
+  const weights = records.map(r=>parseFloat(r.weight));
+  const minW = Math.min(...weights,59)-1, maxW = Math.max(...weights,64)+1;
+  // 网格
+  ctx.strokeStyle="#eee";ctx.lineWidth=1;ctx.fillStyle="#999";ctx.font="11px sans-serif";
+  for(let i=0;i<=4;i++){
+    const y = pad.t + ch*i/4;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    const val = (maxW - (maxW-minW)*i/4).toFixed(1);
+    ctx.fillText(val,4,y+4);
+  }
+  // 目标线
+  const goalY = pad.t + ch*(maxW-59)/(maxW-minW);
+  ctx.strokeStyle="#87a868";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,goalY);ctx.lineTo(w-pad.r,goalY);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#87a868";ctx.fillText("目标59",w-pad.r-36,goalY-4);
+  // 折线
+  ctx.strokeStyle="#447220";ctx.lineWidth=2;ctx.beginPath();
+  records.forEach((r,i)=>{
+    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
+    const y = pad.t + ch*(maxW-parseFloat(r.weight))/(maxW-minW);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // 点
+  ctx.fillStyle="#447220";
+  records.forEach((r,i)=>{
+    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
+    const y = pad.t + ch*(maxW-parseFloat(r.weight))/(maxW-minW);
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
+  });
+  // X轴日期
+  ctx.fillStyle="#999";
+  records.forEach((r,i)=>{
+    if(records.length>6 && i%Math.ceil(records.length/6)!==0 && i!==records.length-1) return;
+    const x = pad.l + (records.length===1?cw/2:cw*i/(records.length-1));
+    ctx.fillText(r.date.slice(5),x-14,h-8);
+  });
 }
+drawChart();
+window.addEventListener("resize",drawChart);
 </script>
 </body>
 </html>
